@@ -1,0 +1,48 @@
+{
+  "id": "template",
+  "name": "Template Plugin",
+  "version": "1.0.0",
+  "description": "NewShell 官方模板插件，演示所有插件 API 的标准用法",
+  "author": "NewShell",
+  "main": "main.js",
+  "contributions": {
+    "toolPages": [
+      {
+        "id": "dashboard",
+        "title": "Template Dashboard",
+        "icon": "📋",
+        "renderer": "dashboard.html"
+      },
+      {
+        "id": "detail",
+        "title": "数据详情",
+        "icon": "📄",
+        "renderer": "detail.html",
+        "hidden": true
+      }
+    ],
+    "sidePanelTabs": [
+      {
+        "id": "template-left",
+        "title": "模板左侧",
+        "icon": "📌",
+        "renderer": "left-panel.html"
+      },
+      {
+        "id": "template-api-list",
+        "title": "数据列表",
+        "icon": "📡",
+        "renderer": "api-list.html"
+      }
+    ],
+    "rightPanelTabs": [
+      {
+        "id": "template-right",
+        "title": "模板右侧",
+        "icon": "📊",
+        "renderer": "right-panel.html"
+      }
+    ]
+  },
+  "permissions": []
+}

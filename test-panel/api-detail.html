@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>API 详情</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    background: var(--bg-primary, #1e1e2e);
+    color: var(--text-primary, #cdd6f4);
+    padding: 24px;
+  }
+  .api-header {
+    margin-bottom: 20px;
+    padding-bottom: 16px;
+    border-bottom: 1px solid var(--border-color, #45475a);
+  }
+  .api-title-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 8px;
+  }
+  .api-method-badge {
+    display: inline-block;
+    padding: 4px 12px;
+    border-radius: 6px;
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+  }
+  .method-GET    { background: rgba(137,180,250,0.2); color: #89b4fa; }
+  .method-POST   { background: rgba(166,227,161,0.2); color: #a6e3a1; }
+  .method-PUT    { background: rgba(249,226,175,0.2); color: #f9e2af; }
+  .method-DELETE { background: rgba(243,139,168,0.2); color: #f38ba8; }
+  .api-path-display {
+    font-size: 16px;
+    font-family: 'Consolas', 'Courier New', monospace;
+    color: var(--text-primary, #cdd6f4);
+  }
+  .api-desc {
+    font-size: 13px;
+    color: var(--text-muted, #6c7086);
+    margin-top: 6px;
+    line-height: 1.6;
+  }
+
+  .section {
+    margin-bottom: 20px;
+  }
+  .section h3 {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--accent-color, #89b4fa);
+    margin-bottom: 10px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .param-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 12px;
+  }
+  .param-table th {
+    text-align: left;
+    padding: 8px 12px;
+    background: var(--bg-secondary, #313244);
+    color: var(--text-muted, #6c7086);
+    font-weight: 600;
+    border-bottom: 1px solid var(--border-color, #45475a);
+  }
+  .param-table td {
+    padding: 8px 12px;
+    border-bottom: 1px solid var(--border-color, #45475a);
+    color: var(--text-primary, #cdd6f4);
+  }
+  .param-table .required {
+    color: #f38ba8;
+    font-weight: 600;
+  }
+  .param-table .optional {
+    color: var(--text-muted, #6c7086);
+  }
+  .param-table .type-col {
+    color: #f9e2af;
+    font-family: monospace;
+  }
+
+  pre {
+    background: var(--bg-secondary, #313244);
+    border-radius: 8px;
+    padding: 14px;
+    font-size: 12px;
+    font-family: 'Consolas', 'Courier New', monospace;
+    overflow-x: auto;
+    line-height: 1.6;
+    border: 1px solid var(--border-color, #45475a);
+  }
+  .json-key   { color: #89b4fa; }
+  .json-str   { color: #a6e3a1; }
+  .json-num   { color: #fab387; }
+  .json-bool  { color: #cba6f7; }
+
+  .empty-state {
+    text-align: center;
+    padding: 60px 20px;
+    color: var(--text-muted, #6c7086);
+  }
+  .empty-state .icon { font-size: 48px; margin-bottom: 16px; }
+  .empty-state p { font-size: 14px; line-height: 1.8; }
+
+  ::-webkit-scrollbar { width: 5px; height: 5px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.08); border-radius: 10px; }
+</style>
+</head>
+<body>
+  <div id="app">
+    <div class="empty-state" id="empty">
+      <div class="icon">📡</div>
+      <p>从左侧 API 列表中选择一个接口查看详情</p>
+      <p style="font-size:12px;margin-top:8px;">数据通过 <code>newshell:params</code> postMessage 传入</p>
+    </div>
+
+    <div id="detail" style="display:none;">
+      <div class="api-header">
+        <div class="api-title-row">
+          <span class="api-method-badge" id="api-method"></span>
+          <span class="api-path-display" id="api-path"></span>
+        </div>
+        <div class="api-desc" id="api-desc"></div>
+      </div>
+
+      <div class="section" id="params-section" style="display:none;">
+        <h3>📥 请求参数</h3>
+        <table class="param-table">
+          <thead><tr><th>参数名</th><th>类型</th><th>必填</th><th>说明</th></tr></thead>
+          <tbody id="params-tbody"></tbody>
+        </table>
+      </div>
+
+      <div class="section" id="body-section" style="display:none;">
+        <h3>📦 请求体</h3>
+        <pre id="body-content"></pre>
+      </div>
+
+      <div class="section" id="response-section" style="display:none;">
+        <h3>📤 响应示例</h3>
+        <pre id="response-content"></pre>
+      </div>
+
+      <div class="section">
+        <h3>🔍 收到的原始 params</h3>
+        <pre id="raw-params"></pre>
+      </div>
+    </div>
+  </div>
+
+<script>
+  // 监听主面板通过 postMessage 发送的 params
+  window.addEventListener('message', function(event) {
+    if (!event.data || event.data.type !== 'newshell:params') return
+
+    var p = event.data.params
+    console.log('[api-detail] Received params:', p)
+
+    if (!p || !p.apiId) return
+
+    // 显示详情，隐藏空状态
+    document.getElementById('empty').style.display = 'none'
+    document.getElementById('detail').style.display = 'block'
+
+    // 填充基本信息
+    document.getElementById('api-method').textContent = p.method || ''
+    document.getElementById('api-method').className = 'api-method-badge method-' + (p.method || 'GET')
+    document.getElementById('api-path').textContent = p.path || ''
+    document.getElementById('api-desc').textContent = p.description || ''
+
+    // 请求参数表格
+    var reqParams = []
+    var reqBody = null
+    var respExample = null
+    try { reqParams = JSON.parse(p.requestParams || '[]') } catch(e) {}
+    try { reqBody = JSON.parse(p.requestBody || 'null') } catch(e) {}
+    try { respExample = JSON.parse(p.responseExample || 'null') } catch(e) {}
+
+    if (reqParams.length > 0) {
+      document.getElementById('params-section').style.display = 'block'
+      var tbody = document.getElementById('params-tbody')
+      tbody.innerHTML = ''
+      reqParams.forEach(function(rp) {
+        tbody.innerHTML +=
+          '<tr>' +
+            '<td>' + rp.name + '</td>' +
+            '<td class="type-col">' + rp.type + '</td>' +
+            '<td class="' + (rp.required ? 'required' : 'optional') + '">' + (rp.required ? '是' : '否') + '</td>' +
+            '<td>' + (rp.desc || '') + '</td>' +
+          '</tr>'
+      })
+    } else {
+      document.getElementById('params-section').style.display = 'none'
+    }
+
+    // 请求体
+    if (reqBody) {
+      document.getElementById('body-section').style.display = 'block'
+      document.getElementById('body-content').textContent = JSON.stringify(reqBody, null, 2)
+    } else {
+      document.getElementById('body-section').style.display = 'none'
+    }
+
+    // 响应示例
+    if (respExample) {
+      document.getElementById('response-section').style.display = 'block'
+      document.getElementById('response-content').textContent = JSON.stringify(respExample, null, 2)
+    } else {
+      document.getElementById('response-section').style.display = 'none'
+    }
+
+    // 原始 params 展示
+    document.getElementById('raw-params').textContent = JSON.stringify(p, null, 2)
+  })
+
+  // 向父窗口报告高度
+  function reportHeight() {
+    parent.postMessage({ type: 'newshell:resize', height: document.body.scrollHeight }, '*')
+  }
+  window.addEventListener('load', reportHeight)
+  if (window.ResizeObserver) {
+    new ResizeObserver(reportHeight).observe(document.body)
+  }
+  new MutationObserver(reportHeight).observe(document.body, { childList: true, subtree: true, attributes: true })
+</script>
+</body>
+</html>

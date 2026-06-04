@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    background: var(--bg-primary, #1e1e2e);
+    color: var(--text-primary, #cdd6f4);
+    padding: 12px;
+  }
+  h3 { font-size: 14px; margin-bottom: 10px; color: var(--accent-color, #89b4fa); }
+  .api-item {
+    background: var(--bg-secondary, #313244);
+    border-radius: 8px;
+    padding: 10px 12px;
+    margin-bottom: 8px;
+    cursor: pointer;
+    border: 1px solid var(--border-color, #45475a);
+    transition: border-color 0.15s, background 0.15s;
+  }
+  .api-item:hover {
+    border-color: var(--accent-color, #89b4fa);
+    background: var(--bg-tertiary, #45475a);
+  }
+  .api-method {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-size: 10px;
+    font-weight: 700;
+    margin-right: 8px;
+  }
+  .method-GET    { background: rgba(137,180,250,0.2); color: #89b4fa; }
+  .method-POST   { background: rgba(166,227,161,0.2); color: #a6e3a1; }
+  .method-PUT    { background: rgba(249,226,175,0.2); color: #f9e2af; }
+  .method-DELETE { background: rgba(243,139,168,0.2); color: #f38ba8; }
+  .api-path { font-size: 12px; color: var(--text-primary, #cdd6f4); }
+  .api-desc  { font-size: 11px; color: var(--text-muted, #6c7086); margin-top: 3px; }
+  ::-webkit-scrollbar { width: 5px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.08); border-radius: 10px; }
+</style>
+</head>
+<body>
+  <h3>📡 API 管理</h3>
+
+  <div class="api-item" onclick="openApi('getUser')">
+    <span class="api-method method-GET">GET</span>
+    <span class="api-path">/api/users/:id</span>
+    <div class="api-desc">获取用户详情</div>
+  </div>
+
+  <div class="api-item" onclick="openApi('listUsers')">
+    <span class="api-method method-GET">GET</span>
+    <span class="api-path">/api/users</span>
+    <div class="api-desc">用户列表（分页）</div>
+  </div>
+
+  <div class="api-item" onclick="openApi('createUser')">
+    <span class="api-method method-POST">POST</span>
+    <span class="api-path">/api/users</span>
+    <div class="api-desc">创建新用户</div>
+  </div>
+
+  <div class="api-item" onclick="openApi('updateUser')">
+    <span class="api-method method-PUT">PUT</span>
+    <span class="api-path">/api/users/:id</span>
+    <div class="api-desc">更新用户信息</div>
+  </div>
+
+  <div class="api-item" onclick="openApi('deleteUser')">
+    <span class="api-method method-DELETE">DELETE</span>
+    <span class="api-path">/api/users/:id</span>
+    <div class="api-desc">删除用户</div>
+  </div>
+
+<script>
+  // Mock API 数据
+  const API_DATA = {
+    getUser: {
+      id: 'getUser',
+      name: '获取用户详情',
+      method: 'GET',
+      path: '/api/users/:id',
+      description: '根据用户 ID 获取用户的详细信息，包括姓名、邮箱、角色、创建时间等。',
+      requestParams: [
+        { name: 'id', type: 'string', required: true, desc: '用户唯一标识' }
+      ],
+      responseExample: {
+        code: 200,
+        data: {
+          id: 'usr_abc123',
+          name: '张三',
+          email: 'zhangsan@example.com',
+          role: 'admin',
+          createdAt: '2024-01-15T08:30:00Z'
+        }
+      }
+    },
+    listUsers: {
+      id: 'listUsers',
+      name: '用户列表',
+      method: 'GET',
+      path: '/api/users',
+      description: '分页获取用户列表，支持按角色筛选和关键词搜索。',
+      requestParams: [
+        { name: 'page', type: 'number', required: false, desc: '页码，默认 1' },
+        { name: 'size', type: 'number', required: false, desc: '每页条数，默认 20' },
+        { name: 'role', type: 'string', required: false, desc: '按角色筛选' },
+        { name: 'keyword', type: 'string', required: false, desc: '姓名/邮箱模糊搜索' }
+      ],
+      responseExample: {
+        code: 200,
+        data: {
+          total: 156,
+          page: 1,
+          size: 20,
+          list: [
+            { id: 'usr_001', name: '张三', role: 'admin' },
+            { id: 'usr_002', name: '李四', role: 'editor' }
+          ]
+        }
+      }
+    },
+    createUser: {
+      id: 'createUser',
+      name: '创建用户',
+      method: 'POST',
+      path: '/api/users',
+      description: '创建一个新用户账号，需要提供姓名、邮箱和初始密码。',
+      requestBody: {
+        name: 'string (必填) - 用户姓名',
+        email: 'string (必填) - 邮箱地址',
+        password: 'string (必填) - 初始密码，至少 8 位',
+        role: 'string (可选) - 角色，默认 member'
+      },
+      responseExample: {
+        code: 201,
+        data: {
+          id: 'usr_new123',
+          name: '新用户',
+          email: 'newuser@example.com',
+          role: 'member',
+          createdAt: '2024-06-01T10:00:00Z'
+        }
+      }
+    },
+    updateUser: {
+      id: 'updateUser',
+      name: '更新用户',
+      method: 'PUT',
+      path: '/api/users/:id',
+      description: '更新指定用户的信息，可修改姓名、邮箱、角色等字段。',
+      requestParams: [
+        { name: 'id', type: 'string', required: true, desc: '用户唯一标识' }
+      ],
+      requestBody: {
+        name: 'string (可选) - 新姓名',
+        email: 'string (可选) - 新邮箱',
+        role: 'string (可选) - 新角色'
+      },
+      responseExample: {
+        code: 200,
+        data: { id: 'usr_abc123', updated: true }
+      }
+    },
+    deleteUser: {
+      id: 'deleteUser',
+      name: '删除用户',
+      method: 'DELETE',
+      path: '/api/users/:id',
+      description: '永久删除指定用户账号，此操作不可逆。',
+      requestParams: [
+        { name: 'id', type: 'string', required: true, desc: '用户唯一标识' }
+      ],
+      responseExample: {
+        code: 200,
+        data: { id: 'usr_abc123', deleted: true }
+      }
+    }
+  }
+
+  function openApi(apiId) {
+    const api = API_DATA[apiId]
+    if (!api) return
+
+    // 通过 postMessage 通知主面板打开 API 详情页，并传递 API 数据
+    parent.postMessage({
+      type: 'newshell:open-tool-page',
+      pageId: 'test-panel::api-detail',
+      data: {
+        apiId: api.id,
+        apiName: api.name,
+        method: api.method,
+        path: api.path,
+        // 复杂数据转为 JSON 字符串传递
+        description: api.description,
+        requestParams: JSON.stringify(api.requestParams || []),
+        requestBody: JSON.stringify(api.requestBody || null),
+        responseExample: JSON.stringify(api.responseExample || null)
+      }
+    }, '*')
+  }
+</script>
+</body>
+</html>

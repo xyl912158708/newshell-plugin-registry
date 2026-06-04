@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Template Dashboard</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: 'DM Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+      background: var(--bg-primary);
+      color: var(--text-primary);
+      padding: 32px;
+      line-height: 1.6;
+    }
+    h2 {
+      font-size: 18px;
+      font-weight: 600;
+      margin-bottom: 8px;
+    }
+    .subtitle {
+      font-size: 13px;
+      color: var(--text-muted);
+      margin-bottom: 32px;
+    }
+    .card-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+      gap: 16px;
+    }
+    .card {
+      background: var(--bg-secondary);
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      padding: 20px;
+      transition: all 0.2s ease;
+    }
+    .card:hover {
+      border-color: var(--accent-color);
+      box-shadow: 0 0 12px rgba(45, 212, 191, 0.1);
+    }
+    .card-icon {
+      font-size: 24px;
+      margin-bottom: 12px;
+    }
+    .card-title {
+      font-size: 14px;
+      font-weight: 600;
+      margin-bottom: 6px;
+    }
+    .card-desc {
+      font-size: 12px;
+      color: var(--text-muted);
+    }
+  </style>
+</head>
+<body>
+  <h2>📋 Template Dashboard</h2>
+  <p class="subtitle">此区域由插件占据，可以用于显示自定义内容——如 API 管理、监控面板等。</p>
+
+  <div class="card-grid">
+    <div class="card">
+      <div class="card-icon">🔌</div>
+      <div class="card-title">注册连接类型</div>
+      <div class="card-desc">通过 connection.registerType() 注册自定义协议处理</div>
+    </div>
+    <div class="card">
+      <div class="card-icon">📊</div>
+      <div class="card-title">面板标签</div>
+      <div class="card-desc">通过 manifest 的 sidePanelTabs / rightPanelTabs 添加侧边面板</div>
+    </div>
+    <div class="card">
+      <div class="card-icon">🖥️</div>
+      <div class="card-title">主页渲染</div>
+      <div class="card-desc">通过 manifest 的 toolPages + renderer 占据终端主区域</div>
+    </div>
+    <div class="card">
+      <div class="card-icon">💾</div>
+      <div class="card-title">持久化存储</div>
+      <div class="card-desc">通过 plugin.storage 读写键值对，支持 JSON 数据</div>
+    </div>
+  </div>
+</body>
+</html>

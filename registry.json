@@ -1,0 +1,37 @@
+{
+  "registryVersion": "1.0.0",
+  "plugins": [
+    {
+      "id": "template",
+      "name": "模板插件",
+      "description": "这是一个模板插件",
+      "author": "Your Name",
+      "latestVersion": "1.0.0",
+      "tags": ["工具", "SSH"],
+      "versions": [
+        {
+          "version": "1.0.0",
+          "downloadUrl": "https://github.com/xyl912158708/newshell-plugin-registry/main/plugins/template/template-v1.0.0.zip",
+          "minAppVersion": "1.2.0",
+          "releaseDate": "2026-06-01"
+        }
+      ]
+    },
+    {
+      "id": "test-panel",
+      "name": "测试插件",
+      "description": "这是一个测试插件",
+      "author": "Your Name",
+      "latestVersion": "1.0.0",
+      "tags": ["工具", "SSH"],
+      "versions": [
+        {
+          "version": "1.0.0",
+          "downloadUrl": "https://github.com/xyl912158708/newshell-plugin-registry/main/plugins/test-panel/test-panel-v1.0.0.zip",
+          "minAppVersion": "1.2.0",
+          "releaseDate": "2026-06-01"
+        }
+      ]
+    }
+  ]
+}

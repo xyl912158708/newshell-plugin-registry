@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>数据列表</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    background: var(--bg-primary, #1e1e2e);
+    color: var(--text-primary, #cdd6f4);
+    padding: 12px;
+  }
+  h3 {
+    font-size: 14px;
+    margin-bottom: 10px;
+    color: var(--accent-color, #89b4fa);
+  }
+  .list-item {
+    background: var(--bg-secondary, #313244);
+    border-radius: 8px;
+    padding: 10px 12px;
+    margin-bottom: 8px;
+    cursor: pointer;
+    border: 1px solid var(--border-color, #45475a);
+    transition: border-color 0.15s, background 0.15s;
+  }
+  .list-item:hover {
+    border-color: var(--accent-color, #89b4fa);
+    background: var(--bg-tertiary, #45475a);
+  }
+  .item-name { font-size: 13px; font-weight: 600; margin-bottom: 4px; }
+  .item-desc { font-size: 11px; color: var(--text-secondary, #a6adc8); }
+  .badge {
+    display: inline-block;
+    font-size: 10px;
+    font-weight: 700;
+    padding: 2px 6px;
+    border-radius: 4px;
+    margin-right: 6px;
+    background: rgba(137,180,250,0.15);
+    color: var(--accent-color, #89b4fa);
+  }
+  .empty-hint {
+    font-size: 12px;
+    color: var(--text-muted, #6c7086);
+    text-align: center;
+    padding: 20px 0;
+  }
+</style>
+</head>
+<body>
+  <h3>📡 数据列表</h3>
+  <p class="empty-hint" style="margin-bottom:12px">
+    点击任意项 → 主面板打开详情工具页，数据通过 postMessage 传递
+  </p>
+
+  <div class="list-item" onclick="openDetail('item-1')">
+    <div class="item-name"><span class="badge">GET</span>查询用户列表</div>
+    <div class="item-desc">/api/users — 获取所有用户信息</div>
+  </div>
+
+  <div class="list-item" onclick="openDetail('item-2')">
+    <div class="item-name"><span class="badge">POST</span>创建新用户</div>
+    <div class="item-desc">/api/users — 创建用户并返回用户信息</div>
+  </div>
+
+  <div class="list-item" onclick="openDetail('item-3')">
+    <div class="item-name"><span class="badge">PUT</span>更新用户信息</div>
+    <div class="item-desc">/api/users/:id — 更新指定用户的信息</div>
+  </div>
+
+  <div class="list-item" onclick="openDetail('item-4')">
+    <div class="item-name"><span class="badge">DELETE</span>删除用户</div>
+    <div class="item-desc">/api/users/:id — 删除指定用户</div>
+  </div>
+
+  <div class="list-item" onclick="openDetail('item-5')">
+    <div class="item-name"><span class="badge">GET</span>获取统计数据</div>
+    <div class="item-desc">/api/stats — 返回系统统计信息</div>
+  </div>
+
+  <p class="empty-hint" style="margin-top:16px">
+    💡 查看 <code>api-list.html</code> 和 <code>detail.html</code> 源码了解 postMessage 通信机制
+  </p>
+
+<script>
+// ============================================================
+// 侧边栏 → 主面板 postMessage 通信演示
+// ============================================================
+
+/** mock 数据 */
+const DATA_MAP = {
+  'item-1': {
+    method: 'GET',
+    path: '/api/users',
+    name: '查询用户列表',
+    description: '获取所有注册用户的信息，支持分页和搜索过滤',
+    params: [
+      { name: 'page', type: 'number', required: false, desc: '页码，默认 1' },
+      { name: 'size', type: 'number', required: false, desc: '每页条数，默认 20' },
+      { name: 'search', type: 'string', required: false, desc: '搜索关键词' }
+    ],
+    response: { code: 200, data: [{ id: 1, name: 'Alice', email: 'alice@example.com' }], total: 100 }
+  },
+  'item-2': {
+    method: 'POST',
+    path: '/api/users',
+    name: '创建新用户',
+    description: '创建新用户账号，需要提供姓名和邮箱',
+    requestBody: { name: 'string (必填)', email: 'string (必填)', role: 'string (可选)' },
+    response: { code: 201, data: { id: 2, name: 'Bob', email: 'bob@example.com' } }
+  },
+  'item-3': {
+    method: 'PUT',
+    path: '/api/users/:id',
+    name: '更新用户信息',
+    description: '更新指定用户 ID 的个人信息',
+    requestBody: { name: 'string', email: 'string', role: 'string' },
+    response: { code: 200, data: { id: 1, name: 'Alice Updated', email: 'alice@example.com' } }
+  },
+  'item-4': {
+    method: 'DELETE',
+    path: '/api/users/:id',
+    name: '删除用户',
+    description: '根据用户 ID 删除指定用户',
+    response: { code: 204, data: null }
+  },
+  'item-5': {
+    method: 'GET',
+    path: '/api/stats',
+    name: '获取统计数据',
+    description: '返回系统级别的统计指标，包括用户数、活跃度等',
+    response: { code: 200, data: { totalUsers: 1024, activeUsers: 512, uptime: '99.9%' } }
+  }
+}
+
+/**
+ * 点击列表项 → 通过 postMessage 通知主面板打开工具页并传递数据
+ *
+ * 消息格式:
+ *   type: 'newshell:open-tool-page'   // 固定，表示打开工具页
+ *   pageId: 'template::detail'        // 目标工具页的全限定 ID（pluginId::pageId）
+ *   data: { ... }                     // 传递给工具页的任意数据
+ */
+function openDetail(itemId) {
+  const data = DATA_MAP[itemId]
+  if (!data) return
+
+  parent.postMessage({
+    type: 'newshell:open-tool-page',
+    pageId: 'template::detail',
+    data: {
+      ...data,
+      itemId,
+      timestamp: Date.now()
+    }
+  }, '*')
+}
+</script>
+</body>
+</html>

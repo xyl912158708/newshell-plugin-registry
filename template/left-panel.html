@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    background: var(--bg-primary, #1e1e2e);
+    color: var(--text-primary, #cdd6f4);
+    padding: 16px;
+    font-size: 13px;
+    line-height: 1.6;
+  }
+  h2 { font-size: 15px; margin-bottom: 16px; color: var(--accent-color, #89b4fa); }
+  .section { margin-bottom: 20px; }
+  .section-title {
+    font-size: 12px;
+    color: var(--text-muted, #6c7086);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 8px;
+  }
+  .card {
+    background: var(--bg-secondary, #313244);
+    border-radius: 8px;
+    padding: 12px;
+    margin-bottom: 8px;
+  }
+  .card .label { font-size: 11px; color: var(--text-muted, #6c7086); }
+  .card .value { margin-top: 4px; word-break: break-all; }
+  .tag {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-size: 11px;
+    margin-right: 4px;
+    margin-top: 4px;
+  }
+  .tag-info { background: rgba(137, 180, 250, 0.15); color: #89b4fa; }
+  .tag-success { background: rgba(166, 227, 161, 0.15); color: #a6e3a1; }
+</style>
+</head>
+<body>
+  <h2>📌 模板 - 左侧面板</h2>
+
+  <div class="section">
+    <div class="section-title">基本信息</div>
+    <div class="card">
+      <div class="label">插件ID</div>
+      <div class="value">template</div>
+    </div>
+    <div class="card">
+      <div class="label">注册方式</div>
+      <div class="value">ui.registerSidePanelTab()</div>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-title">适用场景</div>
+    <div class="card">
+      <div>
+        <span class="tag tag-info">连接树增强</span>
+        <span class="tag tag-info">资源浏览器</span>
+        <span class="tag tag-info">快捷操作</span>
+        <span class="tag tag-success">自定义视图</span>
+      </div>
+      <div style="margin-top:8px;font-size:12px;color:var(--text-muted, #6c7086);">
+        左侧面板适合展示与连接/项目相关的辅助信息，如服务器监控、资源列表、快捷入口等。
+      </div>
+    </div>
+  </div>
+</body>
+</html>

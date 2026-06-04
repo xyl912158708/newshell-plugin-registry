@@ -1,0 +1,245 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>数据详情</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    background: var(--bg-primary, #1e1e2e);
+    color: var(--text-primary, #cdd6f4);
+    padding: 24px;
+    min-height: 100vh;
+  }
+  .empty-state {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: 300px;
+    color: var(--text-muted, #6c7086);
+    font-size: 14px;
+    gap: 8px;
+  }
+  .empty-state .icon { font-size: 48px; opacity: 0.3; }
+  .detail-header {
+    margin-bottom: 20px;
+    padding-bottom: 16px;
+    border-bottom: 1px solid var(--border-color, #45475a);
+  }
+  .title-row { display: flex; align-items: center; gap: 12px; margin-bottom: 8px; }
+  .method-badge {
+    display: inline-block;
+    padding: 4px 12px;
+    border-radius: 6px;
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+  }
+  .method-GET    { background: rgba(137,180,250,0.15); color: #89b4fa; }
+  .method-POST   { background: rgba(166,227,161,0.15); color: #a6e3a1; }
+  .method-PUT    { background: rgba(249,226,175,0.15); color: #f9e2af; }
+  .method-DELETE { background: rgba(243,139,168,0.15); color: #f38ba8; }
+  .path-text { font-family: 'Cascadia Code', 'Fira Code', monospace; font-size: 14px; color: var(--accent-color, #89b4fa); }
+  .info-text { font-size: 13px; color: var(--text-secondary, #a6adc8); line-height: 1.6; }
+  .section { margin-bottom: 20px; }
+  .section-title {
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--text-primary, #cdd6f4);
+    margin-bottom: 10px;
+    padding-bottom: 6px;
+    border-bottom: 1px solid var(--bg-secondary, #313244);
+  }
+  .param-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 12px;
+  }
+  .param-table th {
+    text-align: left;
+    padding: 6px 10px;
+    background: var(--bg-secondary, #313244);
+    color: var(--text-secondary, #a6adc8);
+    font-weight: 600;
+  }
+  .param-table td {
+    padding: 6px 10px;
+    border-bottom: 1px solid var(--bg-secondary, #313244);
+    vertical-align: top;
+  }
+  .param-table .required { color: #f38ba8; font-weight: 700; }
+  .param-table .optional { color: var(--text-muted, #6c7086); }
+  pre {
+    background: var(--bg-secondary, #313244);
+    border-radius: 8px;
+    padding: 12px 16px;
+    font-family: 'Cascadia Code', 'Fira Code', monospace;
+    font-size: 12px;
+    line-height: 1.5;
+    overflow-x: auto;
+    color: var(--text-primary, #cdd6f4);
+    white-space: pre-wrap;
+  }
+  .raw-section { margin-top: 24px; }
+  .raw-section pre {
+    background: var(--bg-tertiary, #45475a);
+    font-size: 11px;
+    color: var(--text-muted, #6c7086);
+    max-height: 200px;
+    overflow-y: auto;
+  }
+  .footer-hint {
+    margin-top: 24px;
+    font-size: 11px;
+    color: var(--text-muted, #6c7086);
+    text-align: center;
+  }
+</style>
+</head>
+<body>
+  <!-- 空状态：尚未收到数据 -->
+  <div id="emptyState" class="empty-state">
+    <span class="icon">📄</span>
+    <span>请从左侧「数据列表」面板点击一个数据项</span>
+    <span style="font-size:11px;opacity:0.5">数据将在此处渲染展示</span>
+  </div>
+
+  <!-- 详情视图：收到数据后显示 -->
+  <div id="detailView" style="display:none">
+    <div class="detail-header">
+      <div class="title-row">
+        <span id="methodBadge" class="method-badge">GET</span>
+        <span id="detailName" class="info-text" style="font-weight:600;font-size:15px"></span>
+      </div>
+      <div id="detailPath" class="path-text" style="margin-bottom:6px"></div>
+      <div id="detailDescription" class="info-text"></div>
+    </div>
+
+    <div class="section" id="paramsSection" style="display:none">
+      <div class="section-title">📥 请求参数</div>
+      <table class="param-table">
+        <thead><tr><th>参数名</th><th>类型</th><th>必填</th><th>说明</th></tr></thead>
+        <tbody id="paramsTableBody"></tbody>
+      </table>
+    </div>
+
+    <div class="section" id="bodySection" style="display:none">
+      <div class="section-title">📦 请求体</div>
+      <pre id="bodyContent"></pre>
+    </div>
+
+    <div class="section" id="responseSection" style="display:none">
+      <div class="section-title">✅ 响应示例</div>
+      <pre id="responseContent"></pre>
+    </div>
+
+    <div class="section raw-section">
+      <div class="section-title">🔍 接收到的原始参数</div>
+      <pre id="rawParams"></pre>
+    </div>
+
+    <p class="footer-hint">
+      💡 查看 <code>detail.html</code> 源码了解 postMessage 接收数据机制
+    </p>
+  </div>
+
+<script>
+// ============================================================
+// 工具页 iframe 接收 params 演示
+// ============================================================
+
+/**
+ * 监听来自主面板的 postMessage
+ *
+ * 消息格式:
+ *   type: 'newshell:params'    // 固定，表示传入参数
+ *   params: { ... }            // 自定义数据（Record<string, unknown>）
+ *
+ * 数据来源:
+ *   1. 侧边栏 iframe 通过 postMessage('newshell:open-tool-page', { data }) 触发
+ *   2. 插件 main.js 通过 ui.openToolPage('pageId', params) 触发
+ *   3. 同一标签重复点击时，主面板 watch 到 params 变化后重新发送
+ */
+window.addEventListener('message', (event) => {
+  if (!event.data || event.data.type !== 'newshell:params') return
+
+  const params = event.data.params
+  console.log('[Detail] Received params:', params)
+  renderDetail(params)
+})
+
+/**
+ * 渲染详情视图
+ */
+function renderDetail(data) {
+  if (!data) return
+
+  // 切换显示状态
+  document.getElementById('emptyState').style.display = 'none'
+  document.getElementById('detailView').style.display = 'block'
+
+  // 填充头部
+  document.getElementById('methodBadge').textContent = data.method || ''
+  document.getElementById('methodBadge').className = 'method-badge method-' + (data.method || 'GET')
+  document.getElementById('detailName').textContent = data.name || ''
+  document.getElementById('detailPath').textContent = data.path || ''
+  document.getElementById('detailDescription').textContent = data.description || ''
+
+  // 请求参数表
+  if (data.params && Array.isArray(data.params) && data.params.length > 0) {
+    document.getElementById('paramsSection').style.display = 'block'
+    const tbody = document.getElementById('paramsTableBody')
+    tbody.innerHTML = data.params.map(p => `
+      <tr>
+        <td><code>${p.name}</code></td>
+        <td>${p.type}</td>
+        <td><span class="${p.required ? 'required' : 'optional'}">${p.required ? '必填' : '可选'}</span></td>
+        <td>${p.desc || ''}</td>
+      </tr>
+    `).join('')
+  } else {
+    document.getElementById('paramsSection').style.display = 'none'
+  }
+
+  // 请求体
+  if (data.requestBody) {
+    document.getElementById('bodySection').style.display = 'block'
+    document.getElementById('bodyContent').textContent = JSON.stringify(data.requestBody, null, 2)
+  } else {
+    document.getElementById('bodySection').style.display = 'none'
+  }
+
+  // 响应示例
+  if (data.response) {
+    document.getElementById('responseSection').style.display = 'block'
+    document.getElementById('responseContent').textContent = JSON.stringify(data.response, null, 2)
+  } else {
+    document.getElementById('responseSection').style.display = 'none'
+  }
+
+  // 原始参数
+  document.getElementById('rawParams').textContent = JSON.stringify(data, null, 2)
+}
+
+// 同时上报 iframe 高度（让父容器正确滚动）
+// 注意：工具页 iframe 由 PluginMainPage 管理，页面内容撑开后需通知父容器
+function reportHeight() {
+  parent.postMessage({
+    type: 'newshell:resize',
+    height: document.body.scrollHeight
+  }, '*')
+}
+window.addEventListener('load', reportHeight)
+if (window.ResizeObserver) {
+  new ResizeObserver(reportHeight).observe(document.body)
+}
+new MutationObserver(reportHeight).observe(document.body, {
+  childList: true, subtree: true, attributes: true
+})
+</script>
+</body>
+</html>

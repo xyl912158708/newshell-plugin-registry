@@ -1,0 +1,46 @@
+{
+  "id": "test-panel",
+  "name": "Test Panel Plugin",
+  "version": "1.0.0",
+  "description": "验证左右面板标签溢出 ⋮ 下拉效果 + 插件主页面渲染",
+  "author": "NewShell",
+  "main": "main.js",
+  "contributions": {
+    "toolPages": [
+      {
+        "id": "test-dashboard",
+        "title": "Test 面板",
+        "icon": "🧪",
+        "renderer": "dashboard.html"
+      },
+      {
+        "id": "api-detail",
+        "title": "API 详情",
+        "icon": "📋",
+        "renderer": "api-detail.html",
+        "hidden": true
+      }
+    ],
+    "sidePanelTabs": [
+      { "id": "api-manager",   "title": "API 管理",     "icon": "📡", "renderer": "api-list.html" },
+      { "id": "dialog-test",    "title": "弹窗测试",     "icon": "💬", "renderer": "dialog-test.html" },
+      { "id": "test-left",      "title": "测试左侧",     "icon": "🧪", "renderer": "left.html" },
+      { "id": "test-monitor",   "title": "资源监控",     "icon": "📈", "renderer": "left.html" },
+      { "id": "test-log",       "title": "日志查看器",   "icon": "📋", "renderer": "left.html" },
+      { "id": "test-quick",     "title": "快捷操作面板", "icon": "⚡", "renderer": "left.html" },
+      { "id": "test-sysinfo",   "title": "系统信息",     "icon": "💻", "renderer": "left.html" },
+      { "id": "test-network",   "title": "网络诊断",     "icon": "🌐", "renderer": "left.html" },
+      { "id": "test-database",  "title": "数据库管理",   "icon": "🗄️", "renderer": "left.html" },
+      { "id": "test-deploy",    "title": "部署管理",     "icon": "🚀", "renderer": "left.html" }
+    ],
+    "rightPanelTabs": [
+      { "id": "test-right",     "title": "测试右侧",     "icon": "🔬", "renderer": "right.html" },
+      { "id": "test-session",   "title": "会话分析",     "icon": "📊", "renderer": "right.html" },
+      { "id": "test-perf",      "title": "性能图表",     "icon": "📉", "renderer": "right.html" },
+      { "id": "test-httplog",   "title": "请求日志",     "icon": "📜", "renderer": "right.html" },
+      { "id": "test-env",       "title": "环境变量",     "icon": "🔧", "renderer": "right.html" },
+      { "id": "test-docker",    "title": "容器管理",     "icon": "🐳", "renderer": "right.html" }
+    ]
+  },
+  "permissions": []
+}

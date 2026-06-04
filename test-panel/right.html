@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    background: var(--bg-primary, #1e1e2e);
+    color: var(--text-primary, #cdd6f4);
+    padding: 16px;
+    overflow-y: auto;
+  }
+  h3 { font-size: 14px; margin-bottom: 12px; color: var(--accent-color, #89b4fa); }
+  .card {
+    background: var(--bg-secondary, #313244);
+    border-radius: 8px;
+    padding: 12px;
+    margin-bottom: 10px;
+    font-size: 12px;
+    line-height: 1.6;
+  }
+  .card .label { color: var(--text-muted, #6c7086); }
+  .card .value { color: var(--text-primary, #cdd6f4); }
+  .counter {
+    font-size: 32px;
+    font-weight: bold;
+    color: var(--accent-color, #89b4fa);
+    text-align: center;
+    margin: 8px 0;
+  }
+  button {
+    display: block;
+    width: 100%;
+    padding: 8px;
+    border: 1px solid var(--accent-color, #89b4fa);
+    border-radius: 6px;
+    background: rgba(137, 180, 250, 0.1);
+    color: var(--accent-color, #89b4fa);
+    cursor: pointer;
+    font-size: 13px;
+    transition: background 0.2s;
+  }
+  button:hover {
+    background: rgba(137, 180, 250, 0.2);
+  }
+  .badge {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 10px;
+    font-size: 11px;
+    background: rgba(166, 227, 161, 0.15);
+    color: #a6e3a1;
+    margin-bottom: 12px;
+  }
+  /* 滚动条 — 与主应用统一样式 */
+  ::-webkit-scrollbar { width: 5px; height: 5px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.08); border-radius: 10px; }
+  ::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.16); }
+  ::-webkit-scrollbar-corner { background: transparent; }
+</style>
+</head>
+<body>
+  <h3>🔬 右侧面板测试</h3>
+  <div class="badge">RightPanel</div>
+  <div class="card">
+    <span class="label">插件ID：</span>
+    <span class="value">test-panel</span>
+  </div>
+  <div class="card">
+    <span class="label">标签ID：</span>
+    <span class="value">test-right</span>
+  </div>
+  <div class="card">
+    <span class="label">点击计数：</span>
+    <div class="counter" id="count">0</div>
+    <button onclick="inc()">点我 +1</button>
+  </div>
+  <script>
+    let n = 0
+    function inc() {
+      n++
+      document.getElementById('count').textContent = n
+    }
+  </script>
+</body>
+</html>
