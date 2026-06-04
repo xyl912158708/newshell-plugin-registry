@@ -11,7 +11,7 @@
       "versions": [
         {
           "version": "1.0.0",
-          "downloadUrl": "https://github.com/xyl912158708/newshell-plugin-registry/main/plugins/template/template-v1.0.0.zip",
+          "downloadUrl": "https://raw.githubusercontent.com/xyl912158708/newshell-plugin-registry/main/plugins/template/template-v1.0.0.zip",
           "minAppVersion": "1.2.0",
           "releaseDate": "2026-06-01"
         }
@@ -27,7 +27,7 @@
       "versions": [
         {
           "version": "1.0.0",
-          "downloadUrl": "https://github.com/xyl912158708/newshell-plugin-registry/main/plugins/test-panel/test-panel-v1.0.0.zip",
+          "downloadUrl": "https://raw.githubusercontent.com/xyl912158708/newshell-plugin-registry/main/plugins/test-panel/test-panel-v1.0.0.zip",
           "minAppVersion": "1.2.0",
           "releaseDate": "2026-06-01"
         }
