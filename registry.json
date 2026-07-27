@@ -32,6 +32,22 @@
           "releaseDate": "2026-06-01"
         }
       ]
+    },
+    {
+      "id": "goshell",
+      "name": "GoShell",
+      "description": "通过 GoShell 客户端连接远程终端（无需 SSH，支持 HTTP 端口访问）",
+      "author": "xyl",
+      "latestVersion": "1.0.0",
+      "tags": ["工具", "SSH"],
+      "versions": [
+        {
+          "version": "1.0.0",
+          "downloadUrl": "https://raw.githubusercontent.com/xyl912158708/newshell-plugin-registry/main/plugins/goshell/goshell-v1.0.0.zip",
+          "minAppVersion": "1.2.0",
+          "releaseDate": "2026-06-01"
+        }
+      ]
     }
   ]
 }
