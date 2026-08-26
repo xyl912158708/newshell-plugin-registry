@@ -46,6 +46,12 @@
           "downloadUrl": "https://raw.githubusercontent.com/xyl912158708/newshell-plugin-registry/main/plugins/goshell/goshell-v1.0.0.zip",
           "minAppVersion": "1.2.0",
           "releaseDate": "2026-06-01"
+        },
+        {
+          "version": "1.0.1",
+          "downloadUrl": "https://raw.githubusercontent.com/xyl912158708/newshell-plugin-registry/main/plugins/goshell/goshell-v1.0.1.zip",
+          "minAppVersion": "2.1.0",
+          "releaseDate": "2026-08-26"
         }
       ]
     }

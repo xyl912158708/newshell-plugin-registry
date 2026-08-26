@@ -1,7 +1,7 @@
 {
   "id": "goshell",
   "name": "GoShell",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "通过 GoShell 客户端连接远程终端（无需 SSH，支持 HTTP 端口访问）",
   "author": "NewShell",
   "main": "main.js",
@@ -15,5 +15,5 @@
       }
     ]
   },
-  "permissions": ["child_process"]
+  "permissions": ["terminal", "network", "child_process"]
 }
