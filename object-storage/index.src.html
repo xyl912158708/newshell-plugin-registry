@@ -1,0 +1,1589 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>对象存储</title>
+<script>
+/* 默认深色（与 NewShell 主界面一致）；用户可在页内右上角切换浅色，偏好会持久化。
+ * 宿主与插件页跨源、媒体查询跟随操作系统，均无法可靠反映应用主题，故不做自动探测。 */
+document.documentElement.dataset.osTheme = 'dark'
+window.__osSetTheme = function (t) { document.documentElement.dataset.osTheme = t }
+</script>
+<!-- __PICO_CSS__ -->
+<style>
+  /* ===== 设计 token（映射 Pico 变量，深/浅跟随应用外观） ===== */
+  /* 注意：Pico 的深色变量只在 [data-theme="dark"] 或 :root:not([data-theme]) +
+   * 媒体查询下生效，而 Electron 中 prefers-color-scheme 可能误报 light，
+   * 故布局 token 直接取色板值（与 Pico 深色板同源），不依赖媒体查询。 */
+  :root {
+    color-scheme: dark;
+    --bg-primary: #13171f;
+    --bg-secondary: #1c212c;
+    --bg-tertiary: #262d3b;
+    --text-primary: #e4e8ef;
+    --text-secondary: #9aa5b5;
+    --text-muted: #79849a;
+    --accent-color: #89b4fa;
+    --border-color: #39415a;
+  }
+  @media (prefers-color-scheme: light) {
+    :root {
+      color-scheme: light;
+      --bg-primary: #ffffff;
+      --bg-secondary: #f4f5f7;
+      --bg-tertiary: #e8eaee;
+      --text-primary: #1f2430;
+      --text-secondary: #5b6472;
+      --text-muted: #828da0;
+      --accent-color: #2563eb;
+      --border-color: #d4d9e0;
+    }
+  }
+  /* Pico 控件色板在 .pico 作用域内跟随媒体查询切换（宿主为 Electron，
+   * 应用设置浅色时 nativeTheme 同步切换媒体查询，实测可靠）。 */
+  .pico {
+    --pico-font-size: 81.25%;
+    --pico-border-radius: 0.375rem;
+    --pico-form-element-spacing-vertical: 0.42rem;
+    --pico-form-element-spacing-horizontal: 0.65rem;
+    --pico-background-color: #13171f;
+    --pico-color: #e4e8ef;
+    --pico-h1-color: #e4e8ef; --pico-h2-color: #e4e8ef; --pico-h3-color: #e4e8ef; --pico-h4-color: #e4e8ef; --pico-h5-color: #e4e8ef; --pico-h6-color: #e4e8ef;
+    --pico-muted-color: #9aa5b5;
+    --pico-muted-border-color: #2a3140;
+    --pico-card-background-color: #1c212c;
+    --pico-card-border-color: #39415a;
+    --pico-dropdown-hover-background-color: #262d3b;
+    --pico-form-element-background-color: #171b24;
+    --pico-form-element-border-color: #39415a;
+    --pico-form-element-color: #e4e8ef;
+    --pico-form-element-placeholder-color: #79849a;
+    --pico-form-element-active-background-color: #171b24;
+    --pico-form-element-active-border-color: #89b4fa;
+    --pico-form-element-focus-color: color-mix(in srgb, #89b4fa 55%, transparent);
+    --pico-switch-background-color: #39415a;
+    --pico-primary-background: #89b4fa; --pico-primary-border: #89b4fa;
+    --pico-primary-hover-background: #a5c8fc; --pico-primary-hover-border: #a5c8fc;
+    --pico-primary-focus: color-mix(in srgb, #89b4fa 55%, transparent);
+    --pico-primary: #11111b; --pico-primary-hover: #11111b; --pico-primary-inverse: #11111b;
+    --pico-h1-color: #e4e8ef; --pico-h2-color: #e4e8ef; --pico-h3-color: #e4e8ef; --pico-h4-color: #e4e8ef; --pico-h5-color: #e4e8ef; --pico-h6-color: #e4e8ef;
+  }
+  @media (prefers-color-scheme: light) {
+    .pico {
+      --pico-background-color: #ffffff;
+      --pico-color: #1f2430;
+      --pico-h1-color: #1f2430; --pico-h2-color: #1f2430; --pico-h3-color: #1f2430; --pico-h4-color: #1f2430; --pico-h5-color: #1f2430; --pico-h6-color: #1f2430;
+      --pico-muted-color: #5b6472;
+      --pico-muted-border-color: #e8eaee;
+      --pico-card-background-color: #f4f5f7;
+      --pico-card-border-color: #d4d9e0;
+      --pico-dropdown-hover-background-color: #e8eaee;
+      --pico-form-element-background-color: #ffffff;
+      --pico-form-element-border-color: #d4d9e0;
+      --pico-form-element-color: #1f2430;
+      --pico-form-element-placeholder-color: #828da0;
+      --pico-form-element-active-background-color: #ffffff;
+      --pico-form-element-active-border-color: #2563eb;
+      --pico-form-element-focus-color: color-mix(in srgb, #2563eb 45%, transparent);
+      --pico-primary-background: #2563eb; --pico-primary-border: #2563eb;
+      --pico-primary-hover-background: #1d4ed8; --pico-primary-hover-border: #1d4ed8;
+      --pico-primary-focus: color-mix(in srgb, #2563eb 45%, transparent);
+      --pico-primary: #ffffff; --pico-primary-hover: #ffffff; --pico-primary-inverse: #ffffff;
+    }
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  #app { height: 100%; display: flex; flex-direction: column; }
+  body {
+    height: 100vh; overflow: hidden;
+    font-family: var(--pico-font-family);
+    background: var(--bg-primary, #1e1e2e); color: var(--text-primary, #cdd6f4);
+    font-size: 13px; padding: 14px 16px 22px; -webkit-font-smoothing: antialiased;
+  }
+  /* 主题接管：JS 按宿主 html/body 的 light 类给 <html> 打 data-os-theme，
+   * 全部 token 以该属性为准（!特异性高于媒体查询块），根治宿主与系统外观不一致。 */
+  :root[data-os-theme="dark"] {
+    color-scheme: dark;
+    --bg-primary: #13171f; --bg-secondary: #1c212c; --bg-tertiary: #262d3b;
+    --text-primary: #e4e8ef; --text-secondary: #9aa5b5; --text-muted: #79849a;
+    --accent-color: #89b4fa; --border-color: #39415a;
+  }
+  :root[data-os-theme="light"] {
+    color-scheme: light;
+    --bg-primary: #ffffff; --bg-secondary: #f4f5f7; --bg-tertiary: #e8eaee;
+    --text-primary: #1f2430; --text-secondary: #5b6472; --text-muted: #828da0;
+    --accent-color: #2563eb; --border-color: #d4d9e0;
+  }
+  :root[data-os-theme="dark"] .pico {
+    --pico-background-color: #13171f; --pico-color: #e4e8ef;
+    --pico-h1-color: #e4e8ef; --pico-h2-color: #e4e8ef; --pico-h3-color: #e4e8ef; --pico-h4-color: #e4e8ef; --pico-h5-color: #e4e8ef; --pico-h6-color: #e4e8ef;
+    --pico-muted-color: #9aa5b5; --pico-muted-border-color: #2a3140;
+    --pico-card-background-color: #1c212c; --pico-card-border-color: #39415a;
+    --pico-dropdown-hover-background-color: #262d3b;
+    --pico-form-element-background-color: #171b24; --pico-form-element-border-color: #39415a;
+    --pico-form-element-color: #e4e8ef; --pico-form-element-placeholder-color: #79849a;
+    --pico-form-element-active-background-color: #171b24; --pico-form-element-active-border-color: #89b4fa;
+    --pico-form-element-focus-color: color-mix(in srgb, #89b4fa 55%, transparent);
+    --pico-switch-background-color: #39415a;
+    --pico-primary-background: #89b4fa; --pico-primary-border: #89b4fa;
+    --pico-primary-hover-background: #a5c8fc; --pico-primary-hover-border: #a5c8fc;
+    --pico-primary-focus: color-mix(in srgb, #89b4fa 55%, transparent);
+    --pico-primary: #11111b; --pico-primary-hover: #11111b; --pico-primary-inverse: #11111b;
+  }
+  :root[data-os-theme="light"] .pico {
+    --pico-background-color: #ffffff; --pico-color: #1f2430;
+    --pico-h1-color: #1f2430; --pico-h2-color: #1f2430; --pico-h3-color: #1f2430; --pico-h4-color: #1f2430; --pico-h5-color: #1f2430; --pico-h6-color: #1f2430;
+    --pico-muted-color: #5b6472; --pico-muted-border-color: #e8eaee;
+    --pico-card-background-color: #f4f5f7; --pico-card-border-color: #d4d9e0;
+    --pico-dropdown-hover-background-color: #e8eaee;
+    --pico-form-element-background-color: #ffffff; --pico-form-element-border-color: #d4d9e0;
+    --pico-form-element-color: #1f2430; --pico-form-element-placeholder-color: #828da0;
+    --pico-form-element-active-background-color: #ffffff; --pico-form-element-active-border-color: #2563eb;
+    --pico-form-element-focus-color: color-mix(in srgb, #2563eb 45%, transparent);
+    --pico-primary-background: #2563eb; --pico-primary-border: #2563eb;
+    --pico-primary-hover-background: #1d4ed8; --pico-primary-hover-border: #1d4ed8;
+    --pico-primary-focus: color-mix(in srgb, #2563eb 45%, transparent);
+    --pico-primary: #ffffff; --pico-primary-hover: #ffffff; --pico-primary-inverse: #ffffff;
+    --pico-h1-color: #1f2430; --pico-h2-color: #1f2430; --pico-h3-color: #1f2430; --pico-h4-color: #1f2430; --pico-h5-color: #1f2430; --pico-h6-color: #1f2430;
+  }
+  ::-webkit-scrollbar { width: 9px; height: 9px; }
+  ::-webkit-scrollbar-thumb { background: var(--border-color); border-radius: 5px; border: 2px solid var(--bg-primary); }
+  button { font: inherit; cursor: pointer; }
+  input, select { font: inherit; }
+  input[type="checkbox"] { accent-color: var(--accent-color); width: 14px; height: 14px; cursor: pointer; margin: 0; }
+  .btn {
+    display: inline-flex; align-items: center; gap: 6px; width: auto;
+    margin-bottom: 0; font-weight: 600; line-height: 1.5; white-space: nowrap; padding: 5px 12px; font-size: 12.5px;
+  }
+  .btn.ghost { background: transparent; color: var(--text-primary); border-color: var(--border-color); font-weight: 500; box-shadow: none; }
+  .btn.ghost:hover { background: var(--bg-tertiary); color: var(--text-primary); border-color: var(--border-color); }
+  .btn.danger { background: #f38ba8; border-color: #f38ba8; color: #11111b; }
+  .btn.danger:hover { background: #f5a3bd; border-color: #f5a3bd; }
+  .btn.small { padding: 2px 9px; font-size: 11.5px; }
+  .btn svg { width: 14px; height: 14px; flex: none; }
+  .pico .icon-btn {
+    background: transparent; border: 1px solid transparent; color: var(--text-secondary);
+    width: 26px; height: 26px; border-radius: 6px; display: inline-flex; align-items: center; justify-content: center; padding: 0;
+  }
+  .icon-btn:hover { background: var(--bg-tertiary); color: var(--text-primary); }
+  .icon-btn svg { width: 15px; height: 15px; }
+
+  .topbar { display: flex; align-items: center; gap: 10px; margin-bottom: 14px; }
+  .topbar .logo {
+    width: 32px; height: 32px; border-radius: 8px; flex: none;
+    background: color-mix(in srgb, var(--accent-color) 18%, transparent); color: var(--accent-color);
+    display: flex; align-items: center; justify-content: center;
+  }
+  .topbar .logo svg { width: 18px; height: 18px; }
+  .topbar h1 { font-size: 15.5px; font-weight: 650; letter-spacing: .2px; }
+  .topbar .sub { font-size: 11.5px; color: var(--text-muted); margin-top: 1px; }
+  .topbar .spacer { flex: 1; }
+
+  .layout { display: flex; gap: 14px; align-items: stretch; flex: 1; min-height: 0; }
+  .side { width: 252px; flex: none; display: flex; flex-direction: column; gap: 12px; overflow-y: auto; }
+  .side-box {
+    background: var(--bg-secondary); border: 1px solid color-mix(in srgb, var(--border-color) 55%, transparent);
+    border-radius: 10px; padding: 10px;
+  }
+  .side-head { display: flex; align-items: center; justify-content: space-between; font-size: 12px; font-weight: 600; color: var(--text-secondary); padding: 0 2px 8px; }
+  .side-head .icon-btn { width: 22px; height: 22px; background: transparent; border-color: transparent; box-shadow: none; }
+  .side-head .icon-btn:hover { background: var(--bg-tertiary); }
+  .side-head .icon-btn svg { width: 13px; height: 13px; }
+
+  .conn-item { display: flex; align-items: center; gap: 9px; padding: 7px 8px; border-radius: 8px; cursor: pointer; margin-bottom: 2px; border: 1px solid transparent; }
+  .conn-item:hover { background: var(--bg-tertiary); }
+  .conn-item.active { background: var(--bg-tertiary); border-color: color-mix(in srgb, var(--border-color) 60%, transparent); box-shadow: inset 2px 0 0 var(--accent-color); }
+  .conn-avatar { width: 30px; height: 30px; border-radius: 7px; flex: none; display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 700; }
+  .conn-meta { flex: 1; min-width: 0; }
+  .conn-name { display: block; font-size: 13px; font-weight: 550; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .conn-sub { display: block; font-size: 11px; color: var(--text-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-top: 1px; }
+  .conn-dot { width: 7px; height: 7px; border-radius: 50%; background: #a6e3a1; flex: none; }
+  .conn-item .icon-btn { opacity: 0; flex: none; }
+  .conn-item:hover .icon-btn, .conn-item.active .icon-btn { opacity: 1; }
+  .form-row label.check-row { display: flex; align-items: center; gap: 8px; font-weight: 500; color: var(--text-primary); cursor: pointer; }
+
+  .bucket-item { display: flex; align-items: center; gap: 8px; padding: 6px 8px; border-radius: 7px; cursor: pointer; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: var(--text-secondary); }
+  .bucket-item:hover { background: var(--bg-tertiary); color: var(--text-primary); }
+  .bucket-item.active { background: var(--bg-tertiary); color: var(--text-primary); box-shadow: inset 2px 0 0 var(--accent-color); }
+  .bucket-item svg { width: 14px; height: 14px; flex: none; opacity: .8; }
+  .bucket-item .grow { flex: 1; overflow: hidden; text-overflow: ellipsis; }
+  .bucket-join { display: flex; gap: 6px; margin-top: 9px; }
+  .bucket-join input { margin-bottom: 0; }
+  .empty-hint { color: var(--text-muted); font-size: 12px; padding: 4px 2px; line-height: 1.65; }
+  .tip-text { color: var(--text-muted); font-size: 11.5px; line-height: 1.7; padding: 0 2px; }
+  .text-input { background: var(--bg-primary); margin-bottom: 0; }
+
+  .main { flex: 1; min-width: 0; display: flex; flex-direction: column; min-height: 0; }
+  .crumbs { display: flex; align-items: center; gap: 2px; flex-wrap: wrap; margin-bottom: 10px; font-size: 13px; min-height: 26px; }
+  .crumbs .crumb { padding: 3px 8px; border-radius: 6px; cursor: pointer; color: var(--accent-color); font-weight: 550; }
+  .crumbs .crumb:hover { background: var(--bg-tertiary); }
+  .crumbs .crumb.root { display: inline-flex; align-items: center; gap: 6px; }
+  .crumbs .crumb.root svg { width: 14px; height: 14px; }
+  .crumbs .sep { color: var(--text-muted); }
+  .toolbar { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; margin-bottom: 10px; }
+  .toolbar .sel-info { color: var(--text-secondary); font-size: 12px; margin-right: 2px; }
+  .batch-bar { background: color-mix(in srgb, var(--accent-color) 9%, var(--bg-secondary)); border: 1px solid color-mix(in srgb, var(--accent-color) 30%, transparent); border-radius: 8px; padding: 5px 8px; }
+
+  .list-wrap { border: 1px solid color-mix(in srgb, var(--border-color) 55%, transparent); border-radius: 10px; overflow: hidden; background: var(--bg-secondary); display: flex; flex-direction: column; flex: 1; min-height: 0; }
+  .list-head, .row { display: grid; grid-template-columns: 30px minmax(0, 1fr) 96px 158px 128px; align-items: center; padding: 0 10px; column-gap: 8px; }
+  @media (max-width: 1120px) {
+    .list-head, .row { grid-template-columns: 28px minmax(0, 1fr) 88px 126px; }
+    .list-head .c-date, .row .c-date { display: none; }
+  }
+  @media (max-width: 880px) {
+    .side { width: 208px; }
+    .list-head, .row { grid-template-columns: 26px minmax(0, 1fr) 74px 118px; padding: 0 8px; column-gap: 6px; }
+  }
+  .list-head { height: 34px; font-size: 12px; color: var(--text-secondary); font-weight: 550; border-bottom: 1px solid color-mix(in srgb, var(--border-color) 55%, transparent); background: var(--bg-primary); }
+  .viewport { flex: 1; min-height: 120px; overflow-y: auto; position: relative; }
+  .spacer { position: relative; width: 100%; }
+  .row { height: 42px; position: absolute; left: 0; right: 0; border-bottom: 1px solid color-mix(in srgb, var(--border-color) 32%, transparent); }
+  .row:hover { background: var(--bg-tertiary); }
+  .row.selected { background: color-mix(in srgb, var(--accent-color) 13%, transparent); }
+  .row .name { display: flex; align-items: center; gap: 9px; overflow: hidden; white-space: nowrap; }
+  .row .fname { overflow: hidden; text-overflow: ellipsis; }
+  .row .dir { cursor: pointer; font-weight: 550; }
+  .row .dir:hover .fname { color: var(--accent-color); }
+  .file-tile { width: 27px; height: 27px; border-radius: 7px; flex: none; background: var(--bg-primary); color: var(--text-secondary); display: flex; align-items: center; justify-content: center; }
+  .file-tile.dir { color: var(--accent-color); background: color-mix(in srgb, var(--accent-color) 13%, transparent); }
+  .file-tile svg { width: 15px; height: 15px; }
+  .row .meta { color: var(--text-secondary); font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .row .acts { display: flex; gap: 1px; justify-content: flex-end; opacity: 0; transition: opacity .12s; }
+  .row:hover .acts, .row.selected .acts { opacity: 1; }
+  .list-empty { padding: 44px 20px; text-align: center; color: var(--text-muted); }
+  .list-empty .big { font-size: 15px; color: var(--text-secondary); margin-bottom: 5px; font-weight: 550; }
+  .list-foot { padding: 8px 12px; font-size: 12px; color: var(--text-secondary); display: flex; gap: 10px; align-items: center; border-top: 1px solid color-mix(in srgb, var(--border-color) 40%, transparent); }
+
+  .tasks { margin-top: 14px; border: 1px solid color-mix(in srgb, var(--border-color) 55%, transparent); border-radius: 10px; background: var(--bg-secondary); overflow: hidden; }
+  .tasks-head { display: flex; align-items: center; gap: 8px; padding: 9px 12px; cursor: pointer; background: var(--bg-primary); font-weight: 600; font-size: 12.5px; }
+  .tasks-head > svg { width: 15px; height: 15px; color: var(--text-secondary); }
+  .tasks-head .badge { background: var(--accent-color); color: #11111b; border-radius: 9px; padding: 0 7px; font-size: 11px; line-height: 17px; font-weight: 600; }
+  .tasks-head .badge.err { background: #f38ba8; }
+  .task { padding: 8px 12px; border-top: 1px solid color-mix(in srgb, var(--border-color) 32%, transparent); }
+  .task .t-row { display: flex; align-items: center; gap: 8px; }
+  .task .t-ico { color: var(--text-secondary); display: inline-flex; }
+  .task .t-ico svg { width: 14px; height: 14px; }
+  .task .t-name { flex: 1; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+  .task .t-status { font-size: 11.5px; color: var(--text-secondary); white-space: nowrap; }
+  .task .t-status.failed { color: #f38ba8; }
+  .task .t-status.done { color: #a6e3a1; }
+  .bar { height: 4px; border-radius: 2px; background: var(--bg-primary); margin-top: 7px; overflow: hidden; }
+  .bar > i { display: block; height: 100%; background: var(--accent-color); border-radius: 2px; transition: width .15s; }
+  .bar > i.failed { background: #f38ba8; }
+  .bar > i.done { background: #a6e3a1; }
+
+  .mask { position: fixed; inset: 0; background: rgba(0,0,0,.52); display: flex; align-items: center; justify-content: center; z-index: 50; }
+  .modal { background: var(--bg-primary); border: 1px solid color-mix(in srgb, var(--border-color) 70%, transparent); border-radius: 12px; width: 520px; max-width: 94vw; max-height: 92vh; overflow-y: auto; padding: 18px; box-shadow: 0 16px 40px rgba(0,0,0,.35); }
+  .modal.wide { width: 860px; }
+  .modal h2 { font-size: 14.5px; font-weight: 650; margin-bottom: 14px; }
+  .form-row { margin-bottom: 11px; }
+  .form-row label { display: block; font-size: 12px; color: var(--text-secondary); margin-bottom: 4px; font-weight: 550; }
+  .form-row .hint { font-size: 11.5px; color: var(--text-muted); margin-top: 4px; line-height: 1.55; }
+  .modal .foot { display: flex; justify-content: flex-end; align-items: center; gap: 8px; margin-top: 16px; }
+  .modal input:not([type="checkbox"]), .modal select { height: 34px; min-height: 34px; padding: 0 10px; font-size: 13px; margin-bottom: 0; }
+  .modal .form-row { margin-bottom: 9px; }
+  .modal .form-row label { margin-bottom: 4px; }
+  .err-text { color: #f38ba8; font-size: 12.5px; white-space: pre-wrap; word-break: break-all; }
+  .ok-text { color: #a6e3a1; font-size: 12.5px; }
+
+  .preview-body { display: flex; align-items: center; justify-content: center; min-height: 300px; }
+  .preview-body img { max-width: 100%; max-height: 66vh; border-radius: 6px; }
+  .preview-body pre { width: 100%; max-height: 66vh; overflow: auto; background: var(--bg-secondary); padding: 12px; border-radius: 8px; font-size: 12px; line-height: 1.55; white-space: pre-wrap; word-break: break-all; }
+  .md-body { width: 100%; max-height: 66vh; overflow: auto; background: var(--bg-secondary); padding: 14px 18px; border-radius: 8px; line-height: 1.7; }
+  .md-body h1, .md-body h2, .md-body h3 { margin: 12px 0 6px; }
+  .md-body code { background: var(--bg-primary); padding: 1px 5px; border-radius: 4px; font-size: 12px; }
+  .md-body pre code { display: block; padding: 10px; overflow-x: auto; }
+  .md-body a { color: var(--accent-color); }
+  .md-body table { border-collapse: collapse; margin: 8px 0; }
+  .md-body td, .md-body th { border: 1px solid var(--border-color); padding: 4px 9px; }
+  #glCanvas { width: 100%; height: 56vh; background: #181825; border-radius: 8px; touch-action: none; }
+  .toast {
+    position: fixed; left: 50%; bottom: 22px; transform: translateX(-50%) translateY(20px);
+    background: var(--bg-tertiary); color: var(--text-primary);
+    border: 1px solid color-mix(in srgb, var(--border-color) 70%, transparent);
+    padding: 8px 16px; border-radius: 8px; font-size: 12.5px; opacity: 0; pointer-events: none; transition: all .2s; z-index: 99;
+    max-width: 80vw; white-space: pre-wrap; box-shadow: 0 8px 24px rgba(0,0,0,.3);
+  }
+  .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+  .spin { display: inline-block; animation: sp 1s linear infinite; }
+  @keyframes sp { to { transform: rotate(360deg); } }
+  .no-session { padding: 60px 30px; text-align: center; }
+  .no-session .big { font-size: 17px; font-weight: 650; margin-bottom: 10px; }
+  .no-session p { color: var(--text-secondary); line-height: 1.8; }
+  .no-session code { background: var(--bg-secondary); padding: 1px 6px; border-radius: 4px; }
+</style>
+</head>
+<body class="pico">
+<div id="app" v-cloak></div>
+
+<!-- __VUE_JS__ -->
+<script>
+'use strict'
+/* ================================================================
+ * 对象存储插件 — Vue 3 渲染端
+ * 全部 S3 协议交互经本地代理（主进程 Node 服务，127.0.0.1:17931）执行，
+ * 本页只做界面与任务编排，不接触密钥、不做签名。
+ * ================================================================ */
+const PROXY = 'http://127.0.0.1:17931'
+const { createApp, ref, reactive, computed, onMounted, nextTick, watch, h } = Vue
+
+function svgIcon(paths, size = 15) {
+  return `<svg viewBox="0 0 24 24" width="${size}" height="${size}" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${paths}</svg>`
+}
+const PRESETS = {
+  custom: { label: '自定义 / 其他 S3 兼容', endpoint: '', region: 'us-east-1', pathStyle: true },
+  aliyun: { label: '阿里云 OSS', endpoint: 'https://s3.oss-cn-hangzhou.aliyuncs.com', region: 'oss-cn-hangzhou', pathStyle: false },
+  aws: { label: 'AWS S3', endpoint: 'https://s3.us-east-1.amazonaws.com', region: 'us-east-1', pathStyle: false },
+  minio: { label: 'MinIO', endpoint: 'http://127.0.0.1:9000', region: 'us-east-1', pathStyle: true },
+  r2: { label: 'Cloudflare R2', endpoint: '', region: 'auto', pathStyle: false },
+  cos: { label: '腾讯云 COS', endpoint: 'https://cos.ap-guangzhou.myqcloud.com', region: 'ap-guangzhou', pathStyle: false },
+  obs: { label: '华为云 OBS', endpoint: 'https://obs.cn-north-4.myhuaweicloud.com', region: 'cn-north-4', pathStyle: false },
+  b2: { label: 'Backblaze B2', endpoint: 'https://s3.us-west-004.backblazeb2.com', region: 'us-west-004', pathStyle: false }
+}
+const I = {
+  database: svgIcon('<ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"/><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/>', 18),
+  plus: svgIcon('<path d="M12 5v14M5 12h14"/>', 13),
+  refresh: svgIcon('<path d="M23 4v6h-6"/><path d="M1 20v-6h6"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/>'),
+  upload: svgIcon('<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="M17 8l-5-5-5 5"/><path d="M12 3v12"/>', 14),
+  folderPlus: svgIcon('<path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/><path d="M12 11v6M9 14h6"/>', 14),
+  folder: svgIcon('<path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/>'),
+  file: svgIcon('<path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/><path d="M13 2v7h7"/>'),
+  image: svgIcon('<rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/>'),
+  film: svgIcon('<rect x="2" y="2" width="20" height="20" rx="2.18"/><path d="M7 2v20M17 2v20M2 12h20M2 7h5M2 17h5M17 17h5M17 7h5"/>'),
+  music: svgIcon('<path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/>'),
+  box: svgIcon('<path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><path d="M3.27 6.96L12 12.01l8.73-5.05M12 22.08V12"/>'),
+  archive: svgIcon('<path d="M21 8v13H3V8"/><path d="M1 3h22v5H1z"/><path d="M10 12h4"/>'),
+  code: svgIcon('<path d="M16 18l6-6-6-6M8 6l-6 6 6 6"/>'),
+  eye: svgIcon('<path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/>'),
+  link: svgIcon('<path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/>'),
+  edit: svgIcon('<path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.12 2.12 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>'),
+  trash: svgIcon('<path d="M3 6h18"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>'),
+  enter: svgIcon('<path d="M5 12h14"/><path d="M12 5l7 7-7 7"/>'),
+  bucket: svgIcon('<path d="M4 9c0-1.66 3.58-3 8-3s8 1.34 8 3v9c0 1.66-3.58 3-8 3s-8-1.34-8-3z"/><path d="M4 9c0 1.66 3.58 3 8 3s8-1.34 8-3"/>', 14),
+  swap: svgIcon('<path d="M17 1l4 4-4 4"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><path d="M7 23l-4-4 4-4"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/>', 14),
+  up: svgIcon('<path d="M12 19V5"/><path d="M5 12l7-7 7 7"/>', 14),
+  down: svgIcon('<path d="M12 5v14"/><path d="M19 12l-7 7-7-7"/>', 14),
+  copy: svgIcon('<rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>', 14)
+}
+
+const app = createApp({
+  setup() {
+    const ROW_H = 42
+    const connections = ref([])
+    const connId = ref(null)
+    const pageError = ref('')
+    const editor = reactive({ open: false, id: null, name: '', preset: 'custom', endpoint: '', region: 'us-east-1', bucket: '', ak: '', sk: '', pathStyle: true, testMsg: '', testOk: false, testing: false })
+    const buckets = ref([])
+    const bucket = ref('')
+    const bucketInput = ref('')
+    const prefix = ref('')
+    const prefixSearchText = ref('')
+    const entries = ref([])
+    const nextToken = ref(null)
+    const loading = ref(false)
+    const listStatus = ref('未选择连接')
+    const selected = ref(new Set())
+    const scrollTop = ref(0)
+    const tasks = ref([])
+    const tasksOpen = ref(true)
+    const toastText = ref('')
+    const presign = reactive({ open: false, key: '', expires: 3600, url: '' })
+    const preview = reactive({ open: false, entry: null, kind: '', kindName: '', loading: false, error: '', url: '', text: '', html: '', officeViewer: '' })
+    const copyModal = reactive({ open: false, mode: 'copy', keys: [], bucket: '', prefix: '' })
+    const confirmModal = reactive({ open: false, title: '', text: '', okText: '确定' })
+    const promptModal = reactive({ open: false, title: '', value: '', okText: '确定' })
+    let confirmResolve = null, promptResolve = null, toastTimer = null, taskSeq = 0
+    const controllers = new Map() // taskId -> AbortController（不入 reactive，避免代理破坏内部槽）
+    const taskFiles = new Map()   // taskId -> File
+    let previewObjectUrl = null
+
+    const curConn = computed(() => connections.value.find((c) => c.id === connId.value) || null)
+    const crumbParts = computed(() => {
+      if (!prefix.value) return []
+      const parts = prefix.value.replace(/\/$/, '').split('/')
+      let acc = ''
+      return parts.map((name) => { acc += name + '/'; return { name, prefix: acc } })
+    })
+    const visibleEntries = computed(() => {
+      const start = Math.max(0, Math.floor(scrollTop.value / ROW_H) - 6)
+      const end = Math.min(entries.value.length, start + Math.ceil(480 / ROW_H) + 12)
+      return entries.value.slice(start, end).map((e, i) => Object.assign({ _idx: start + i }, e))
+    })
+    const allChecked = computed(() => {
+      const files = entries.value.filter((x) => !x.isDir)
+      return files.length > 0 && files.every((x) => selected.value.has(x.key))
+    })
+    const activeTasks = computed(() => tasks.value.filter((t) => t.status === 'running').length)
+    const failedTasks = computed(() => tasks.value.filter((t) => t.status === 'failed').length)
+
+    function resize() {
+      requestAnimationFrame(() => {
+        const h = Math.max(document.documentElement.scrollHeight, document.body.scrollHeight)
+        parent.postMessage({ type: 'newshell:resize', height: h }, '*')
+      })
+    }
+    watch([connections, entries, tasks, () => presign.open, () => preview.open], () => nextTick(resize), { deep: true })
+    function humanizeError(msg) {
+      const m = String(msg || '')
+      if (/SignatureDoesNotMatch|InvalidAccessKeyId|SignatureDoesn't match|AuthFailure/i.test(m)) return '签名验证失败，请检查 Access Key、Secret Key 与 Region（原文：' + m + '）'
+      if (/NoSuchBucket/i.test(m)) return 'Bucket 不存在，请检查名称（原文：' + m + '）'
+      if (/NoSuchKey/i.test(m)) return '对象不存在或已被删除（原文：' + m + '）'
+      if (/AccessDenied|Forbidden/i.test(m) && !/Signature/.test(m)) return '没有权限执行该操作，请检查账号权限策略（原文：' + m + '）'
+      if (/ECONNREFUSED|ENOTFOUND|ETIMEDOUT|ECONNRESET|EAI_AGAIN|socket hang up/i.test(m)) return '无法连接存储服务器，请检查 Endpoint 与网络（原文：' + m + '）'
+      if (/无法连接插件代理/.test(m)) return m + '（插件主进程代理未就绪，请确认插件已启用）'
+      return m
+    }
+    function toast(msg) {
+      toastText.value = humanizeError(msg)
+      clearTimeout(toastTimer)
+      toastTimer = setTimeout(() => { toastText.value = '' }, 2600)
+    }
+    function fmtSize(n) {
+      if (n == null) return '-'
+      if (n < 1024) return n + ' B'
+      const u = ['KB', 'MB', 'GB', 'TB']
+      let v = n / 1024, i = 0
+      while (v >= 1024 && i < u.length - 1) { v /= 1024; i++ }
+      return v.toFixed(v >= 100 ? 0 : 1) + ' ' + u[i]
+    }
+    function fmtTime(iso) {
+      if (!iso) return '-'
+      const d = new Date(iso)
+      const p = (x) => String(x).padStart(2, '0')
+      return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}`
+    }
+    function hostOf(endpoint) { try { return new URL(endpoint).host } catch (_) { return endpoint || '' } }
+    function avatarStyle(name) {
+      let h = 0
+      for (const ch of String(name || '')) h = (h * 31 + ch.charCodeAt(0)) % 360
+      return { background: `hsl(${h} 32% 45% / .18)`, color: `hsl(${h} 65% 68%)` }
+    }
+    function tileIcon(e) {
+      if (!e) return I.file
+      if (e.isDir) return I.folder
+      const ext = (e.name.split('.').pop() || '').toLowerCase()
+      if (['png', 'jpg', 'jpeg', 'gif', 'webp', 'svg', 'bmp', 'ico', 'avif'].includes(ext)) return I.image
+      if (['mp4', 'mkv', 'webm', 'mov', 'avi'].includes(ext)) return I.film
+      if (['mp3', 'wav', 'flac', 'ogg', 'm4a'].includes(ext)) return I.music
+      if (['zip', 'tar', 'gz', '7z', 'rar', 'bz2', 'xz'].includes(ext)) return I.archive
+      if (['stl', 'obj', 'glb', 'gltf', 'fbx', 'step', 'stp'].includes(ext)) return I.box
+      if (['md', 'txt', 'json', 'js', 'ts', 'py', 'html', 'css', 'xml', 'log', 'yml', 'yaml'].includes(ext)) return I.code
+      return I.file
+    }
+
+    /* ---------- 代理调用 ---------- */
+    async function proxyJson(url, options) {
+      let res
+      try { res = await fetch(url, options) } catch (e) {
+        throw new Error('无法连接插件代理服务（请确认插件已启用）')
+      }
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok || data.error) throw new Error(data.error || `代理请求失败（HTTP ${res.status}）`)
+      return data
+    }
+    function cfgOf(conn) {
+      return conn ? { endpoint: conn.endpoint, region: conn.region, ak: conn.ak, sk: conn.sk, pathStyle: conn.pathStyle } : null
+    }
+    function cfgHeader(cfg) {
+      return { 'x-os-cfg': btoa(unescape(encodeURIComponent(JSON.stringify(cfg)))) }
+    }
+    function s3opCfg(cfg, payload) {
+      return proxyJson(PROXY + '/s3', {
+        method: 'POST', headers: { 'content-type': 'application/json' },
+        body: JSON.stringify(Object.assign({ cfg }, payload))
+      })
+    }
+    function s3op(payload) {
+      const conn = curConn.value
+      if (!conn) return Promise.reject(new Error('未选择连接'))
+      return s3opCfg(cfgOf(conn), payload)
+    }
+    function qs(params) { return new URLSearchParams(params).toString() }
+
+    /* ---------- 连接与列表 ---------- */
+    async function persistConnections() {
+      try { await storeBridge.set('connections', JSON.parse(JSON.stringify(connections.value))) } catch (_) { /* ignore */ }
+    }
+    async function loadConnections() {
+      pageError.value = ''
+      try { connections.value = (await storeBridge.get('connections')) || [] } catch (_) { connections.value = [] }
+      if (connections.value.length) {
+        let lastId = null
+        try { lastId = await storeBridge.get('lastConnId') } catch (_) { /* ignore */ }
+        connId.value = connections.value.some((c) => c.id === lastId) ? lastId : connections.value[0].id
+        bucket.value = curConn.value?.bucket || ''
+        if (!bucket.value) await fetchBuckets(true)
+        if (bucket.value) await refreshList()
+      }
+      resize()
+    }
+    async function selectConnection(id) {
+      if (id === connId.value) return
+      connId.value = id
+      storeBridge.set('lastConnId', id).catch(() => {})
+      bucket.value = curConn.value?.bucket || ''
+      prefix.value = ''
+      entries.value = []
+      selected.value = new Set()
+      if (!bucket.value) await fetchBuckets(true)
+      if (bucket.value) await refreshList()
+    }
+    function presetLabelOf(c) { return (PRESETS[c.preset]?.label || '').split('（')[0].split(' / ')[0] }
+    function openConnEditor(conn) {
+      editor.id = conn ? conn.id : null
+      editor.name = conn?.name || ''
+      editor.preset = conn?.preset || 'custom'
+      editor.endpoint = conn?.endpoint || ''
+      editor.region = conn?.region || 'us-east-1'
+      editor.bucket = conn?.bucket || ''
+      editor.ak = conn?.ak || ''
+      editor.sk = conn?.sk || ''
+      editor.pathStyle = conn ? !!conn.pathStyle : true
+      editor.testMsg = ''; editor.testOk = false; editor.testing = false
+      editor.open = true
+    }
+    function applyPreset() {
+      const p = PRESETS[editor.preset]
+      if (!p) return
+      if (p.endpoint) editor.endpoint = p.endpoint
+      editor.region = p.region
+      editor.pathStyle = p.pathStyle
+    }
+    function editorCfg() {
+      return { endpoint: editor.endpoint.trim(), region: editor.region.trim() || 'us-east-1', ak: editor.ak.trim(), sk: editor.sk, pathStyle: !!editor.pathStyle }
+    }
+    async function testEditor() {
+      editor.testing = true; editor.testMsg = ''
+      try {
+        const d = await s3opCfg(editorCfg(), { op: 'listBuckets' })
+        editor.testOk = true
+        editor.testMsg = `连接成功，共 ${d.buckets.length} 个 Bucket`
+      } catch (e) {
+        editor.testOk = false
+        editor.testMsg = '连接失败：' + humanizeError(e.message)
+      } finally { editor.testing = false }
+    }
+    async function saveEditor() {
+      if (!editor.name.trim()) { toast('请填写连接名称'); return }
+      if (!editor.endpoint.trim()) { toast('请填写 Endpoint'); return }
+      if (!editor.ak.trim()) { toast('请填写 Access Key'); return }
+      const data = {
+        name: editor.name.trim(), preset: editor.preset, endpoint: editor.endpoint.trim(),
+        region: editor.region.trim() || 'us-east-1', bucket: editor.bucket.trim(),
+        ak: editor.ak.trim(), sk: editor.sk, pathStyle: !!editor.pathStyle
+      }
+      if (editor.id) {
+        const idx = connections.value.findIndex((c) => c.id === editor.id)
+        if (idx >= 0) connections.value[idx] = Object.assign({}, connections.value[idx], data)
+      } else {
+        const c = Object.assign({ id: 'c' + Date.now().toString(36) + Math.floor(Math.random() * 999) }, data)
+        connections.value.push(c)
+        connId.value = c.id
+        storeBridge.set('lastConnId', c.id).catch(() => {})
+      }
+      await persistConnections()
+      editor.open = false
+      bucket.value = curConn.value?.bucket || ''
+      prefix.value = ''; entries.value = []; selected.value = new Set()
+      if (!bucket.value) await fetchBuckets(true)
+      if (bucket.value) await refreshList()
+      toast('连接已保存')
+    }
+    async function deleteEditorConn() {
+      if (!editor.id) return
+      if (!(await showConfirm('删除连接', '确定删除该连接配置？', '删除'))) return
+      connections.value = connections.value.filter((c) => c.id !== editor.id)
+      if (connId.value === editor.id) connId.value = connections.value[0]?.id || null
+      await persistConnections()
+      editor.open = false
+      bucket.value = curConn.value?.bucket || ''
+      prefix.value = ''; entries.value = []
+      if (curConn.value && !bucket.value) await fetchBuckets(true)
+      if (bucket.value) refreshList()
+    }
+    async function fetchBuckets(autoOpen = false) {
+      if (!connId.value) return
+      try {
+        const data = await s3op({ op: 'listBuckets' })
+        buckets.value = data.buckets || []
+        if (autoOpen && !bucket.value && buckets.value.length) bucket.value = buckets.value[0]
+      } catch (e) { toast('列出 Bucket 失败：' + e.message) }
+    }
+    async function openBucket(b) {
+      if (!b) return
+      bucket.value = b
+      prefix.value = ''
+      selected.value = new Set()
+      await refreshList()
+    }
+    async function refreshList() {
+      if (!connId.value || !bucket.value) { entries.value = []; listStatus.value = connId.value ? '未打开 Bucket' : '未选择连接'; return }
+      loading.value = true
+      listStatus.value = '加载中…'
+      try {
+        const data = await s3op({ op: 'list', bucket: bucket.value, prefix: prefix.value })
+        entries.value = data.entries
+        nextToken.value = data.nextToken
+        listStatus.value = `${nextToken.value ? `已加载 ${entries.value.length} 项（还有更多，滚动到底或点加载更多）` : `共 ${entries.value.length} 项`} · ${bucket.value}/${prefix.value}`
+      } catch (e) {
+        entries.value = []
+        listStatus.value = '加载失败：' + humanizeError(e.message)
+        toast('加载失败：' + e.message)
+      } finally { loading.value = false }
+    }
+    async function loadMore() {
+      if (!nextToken.value || loading.value) return
+      loading.value = true
+      try {
+        const data = await s3op({ op: 'list', bucket: bucket.value, prefix: prefix.value, token: nextToken.value })
+        entries.value = entries.value.concat(data.entries)
+        nextToken.value = data.nextToken
+        listStatus.value = `${nextToken.value ? `已加载 ${entries.value.length} 项（还有更多）` : `共 ${entries.value.length} 项`} · ${bucket.value}/${prefix.value}`
+      } catch (e) { listStatus.value = '加载更多失败：' + humanizeError(e.message); toast('加载更多失败：' + e.message) } finally { loading.value = false }
+    }
+    function onScroll(ev) {
+      scrollTop.value = ev.target.scrollTop
+      const vp = ev.target
+      if (vp.scrollTop + vp.clientHeight > vp.scrollHeight - 300) loadMore()
+    }
+    function gotoPrefix(p) { prefix.value = p; selected.value = new Set(); refreshList() }
+    function doPrefixSearch() {
+      let v = prefixSearchText.value.trim()
+      if (v && !v.endsWith('/')) v += '/'
+      gotoPrefix(v)
+    }
+    function toggleSelect(e, ev) {
+      const next = new Set(selected.value)
+      if (ev.target.checked) next.add(e.key); else next.delete(e.key)
+      selected.value = next
+    }
+    function toggleAll(ev) {
+      const next = new Set(selected.value)
+      for (const x of entries.value) { if (x.isDir) continue; if (ev.target.checked) next.add(x.key); else next.delete(x.key) }
+      selected.value = next
+    }
+    function clearSelection() { selected.value = new Set() }
+
+    /* ---------- 通用弹窗 ---------- */
+    function showConfirm(title, text, okText) {
+      confirmModal.title = title; confirmModal.text = text; confirmModal.okText = okText || '确定'; confirmModal.open = true
+      return new Promise((r) => { confirmResolve = r })
+    }
+    function resolveConfirm(v) { confirmModal.open = false; if (confirmResolve) { confirmResolve(v); confirmResolve = null } }
+    function showPrompt(title, value, okText) {
+      promptModal.title = title; promptModal.value = value || ''; promptModal.okText = okText || '确定'; promptModal.open = true
+      return new Promise((r) => { promptResolve = r })
+    }
+    function resolvePrompt(v) { promptModal.open = false; if (promptResolve) { promptResolve(v); promptResolve = null } }
+
+    /* ---------- 行操作 ---------- */
+    async function deleteEntry(e) {
+      if (!(await showConfirm('删除文件', `确定删除 ${e.key}？此操作不可恢复。`, '删除'))) return
+      try { await s3op({ op: 'delete', bucket: bucket.value, key: e.key }); selected.value.delete(e.key); toast('已删除'); refreshList() }
+      catch (err) { toast('删除失败：' + err.message) }
+    }
+    async function deleteDir(e) {
+      if (!(await showConfirm('删除文件夹', `确定删除文件夹 ${e.key} 及其下全部对象？此操作不可恢复。`, '删除'))) return
+      try {
+        const r = await s3op({ op: 'deletePrefix', bucket: bucket.value, prefix: e.key })
+        toast(`已删除 ${r.count} 个对象`); refreshList()
+      } catch (err) { toast('删除失败：' + err.message) }
+    }
+    async function renameEntry(e) {
+      const v = await showPrompt('重命名 / 移动（输入新 Key）', e.key, '重命名')
+      if (!v || v === e.key) return
+      try {
+        await s3op({ op: 'copy', srcBucket: bucket.value, srcKey: e.key, dstBucket: bucket.value, dstKey: v })
+        await s3op({ op: 'delete', bucket: bucket.value, key: e.key })
+        toast('已移动到 ' + v); refreshList()
+      } catch (err) { toast('移动失败：' + err.message) }
+    }
+    async function newFolder() {
+      if (!bucket.value) { toast('请先打开 Bucket'); return }
+      const name = await showPrompt('新建文件夹（输入名称）', '', '创建')
+      if (!name) return
+      const key = prefix.value + name.replace(/\/+$/, '') + '/'
+      try { await s3op({ op: 'createFolder', bucket: bucket.value, key }); toast('已创建 ' + key); refreshList() }
+      catch (err) { toast('创建失败：' + err.message) }
+    }
+
+    /* ---------- 任务中心 ---------- */
+    const storeBridge = {
+      req(action, payload) {
+        return new Promise((resolve, reject) => {
+          const requestId = ++taskSeq * 1000 + Math.floor(Math.random() * 999)
+          const handler = (ev) => {
+            const d = ev.data
+            if (!d || d.type !== 'newshell:plugin-action-response' || d.requestId !== requestId) return
+            window.removeEventListener('message', handler)
+            if (d.error) reject(new Error(d.error)); else resolve(d.result)
+          }
+          window.addEventListener('message', handler)
+          parent.postMessage({ type: 'newshell:plugin-action', action, payload: Object.assign({ }, payload), requestId }, '*')
+          setTimeout(() => { window.removeEventListener('message', handler); reject(new Error('宿主响应超时')) }, 15000)
+        })
+      },
+      get: (key) => storeBridge.req('storage-get', { key }),
+      set: (key, value) => storeBridge.req('storage-set', { key, value })
+    }
+    const uiTheme = ref('dark')
+    async function toggleTheme() {
+      uiTheme.value = uiTheme.value === 'dark' ? 'light' : 'dark'
+      if (window.__osSetTheme) window.__osSetTheme(uiTheme.value)
+      try { await storeBridge.set('ui-theme', uiTheme.value) } catch (_) { /* ignore */ }
+    }
+    function addTask(desc) {
+      const t = reactive(Object.assign({ id: ++taskSeq, status: 'running', loaded: 0, size: 0, error: '', connId: connId.value, cfg: cfgOf(curConn.value), bucket: bucket.value }, desc))
+      controllers.set(t.id, new AbortController())
+      tasks.value.unshift(t)
+      return t
+    }
+    function taskSignal(t) { const c = controllers.get(t.id); return c ? c.signal : undefined }
+    function persistFailed() {
+      const list = tasks.value.filter((t) => t.kind === 'download' && t.status === 'failed')
+        .map((t) => ({ cfg: t.cfg, bucket: t.bucket, key: t.key, name: t.name, size: t.size, error: t.error }))
+      storeBridge.set('download-retries', list).catch(() => {})
+    }
+    function finishTask(t, status, error) {
+      t.status = status; t.error = error || ''
+      if (status === 'done') t.loaded = t.size
+      persistFailed()
+    }
+    function taskPct(t) { return t.size > 0 ? Math.min(100, Math.round(t.loaded / t.size * 100)) : (t.status === 'done' ? 100 : 0) }
+    function taskStatusText(t) {
+      if (t.status === 'running') return `${fmtSize(t.loaded)} / ${fmtSize(t.size)} · ${taskPct(t)}%`
+      return { done: '已完成', failed: '失败' + (t.error ? ' · ' + t.error : ''), canceled: '已取消' }[t.status] || t.status
+    }
+    function taskIcon(t) { return t.kind === 'upload' ? I.up : t.kind === 'download' ? I.down : I.copy }
+    function cancelTask(t) { const c = controllers.get(t.id); if (c) c.abort() }
+    function removeTask(t) { tasks.value = tasks.value.filter((x) => x.id !== t.id); controllers.delete(t.id); taskFiles.delete(t.id); persistFailed() }
+    function clearFinishedTasks() { tasks.value = tasks.value.filter((t) => t.status === 'running' || t.status === 'failed'); persistFailed() }
+    function retryTask(t) {
+      controllers.set(t.id, new AbortController()); t.status = 'running'; t.error = ''; t.loaded = 0
+      if (t.kind === 'download') runDownload(t)
+      else if (t.kind === 'upload') { if (taskFiles.has(t.id)) runUpload(t); else finishTask(t, 'failed', '页面已重载，需重新选择该文件上传') }
+      else if (t.kind === 'copy') runCopyBatch(t)
+    }
+    function scrollToTasks() { nextTick(() => document.querySelector('.tasks')?.scrollIntoView({ behavior: 'smooth', block: 'nearest' })) }
+
+    /* ---------- 下载 ---------- */
+    function addDownloadTask(e) {
+      const t = addTask({ kind: 'download', name: e.name, key: e.key, size: e.size || 0 })
+      runDownload(t)
+    }
+    async function runDownload(t) {
+      try {
+        const url = PROXY + '/download?' + qs({ bucket: t.bucket, key: t.key })
+        const res = await fetch(url, { signal: taskSignal(t), headers: cfgHeader(t.cfg) })
+        if (!res.ok) {
+          const data = await res.json().catch(() => ({}))
+          throw new Error(data.error || `HTTP ${res.status}`)
+        }
+        t.size = Number(res.headers.get('content-length') || 0) || t.size
+        const chunks = []
+        if (res.body && res.body.getReader) {
+          const reader = res.body.getReader()
+          while (true) {
+            const { done, value } = await reader.read()
+            if (done) break
+            chunks.push(value); t.loaded += value.byteLength
+          }
+        } else {
+          const blob = await res.blob()
+          chunks.push(new Uint8Array(await blob.arrayBuffer())); t.loaded = t.size
+        }
+        const blob = new Blob(chunks)
+        const a = document.createElement('a')
+        a.href = URL.createObjectURL(blob)
+        a.download = t.key.split('/').pop() || t.name
+        document.body.appendChild(a); a.click(); a.remove()
+        setTimeout(() => URL.revokeObjectURL(a.href), 30000)
+        finishTask(t, 'done')
+      } catch (e) {
+        if (e.name === 'AbortError') finishTask(t, 'canceled')
+        else finishTask(t, 'failed', e.message)
+      }
+    }
+
+    /* ---------- 上传 ---------- */
+    const MULTIPART_THRESHOLD = 16 * 1024 * 1024
+    const PART_SIZE = 8 * 1024 * 1024
+    let fileInputEl = null
+    function triggerUpload() {
+      if (!bucket.value) { toast('请先打开 Bucket'); return }
+      if (fileInputEl) fileInputEl.click()
+    }
+    function onFilesPicked(ev) {
+      for (const f of ev.target.files) {
+        const t = addTask({ kind: 'upload', name: f.name, key: prefix.value + f.name, size: f.size })
+        taskFiles.set(t.id, f)
+        runUpload(t)
+      }
+      ev.target.value = ''
+    }
+    async function runUpload(t) {
+      const file = taskFiles.get(t.id)
+      try {
+        if (file.size >= MULTIPART_THRESHOLD) await uploadMultipart(t, file)
+        else {
+          const url = PROXY + '/put?' + qs({ bucket: t.bucket, key: t.key, type: file.type || 'application/octet-stream' })
+          const res = await fetch(url, { method: 'PUT', body: file, signal: taskSignal(t), headers: cfgHeader(t.cfg) })
+          const data = await res.json().catch(() => ({}))
+          if (!res.ok || data.error) throw new Error(data.error || `HTTP ${res.status}`)
+          t.loaded = file.size
+        }
+        finishTask(t, 'done')
+        if (t.connId === connId.value && t.bucket === bucket.value) refreshList()
+      } catch (e) {
+        if (e.name === 'AbortError') finishTask(t, 'canceled')
+        else finishTask(t, 'failed', e.message)
+      }
+    }
+    async function uploadMultipart(t, file) {
+      const created = await s3opFor(t, { op: 'multipartCreate', bucket: t.bucket, key: t.key, contentType: file.type || 'application/octet-stream' })
+      const uploadId = created.uploadId
+      const total = Math.ceil(file.size / PART_SIZE)
+      const parts = []
+      let nextPart = 1, loadedBytes = 0
+      const worker = async () => {
+        while (true) {
+          const n = nextPart++
+          if (n > total) return
+          const blob = file.slice((n - 1) * PART_SIZE, Math.min(n * PART_SIZE, file.size))
+          const url = PROXY + '/part?' + qs({ bucket: t.bucket, key: t.key, uploadId, n })
+          const res = await fetch(url, { method: 'PUT', body: blob, signal: taskSignal(t), headers: cfgHeader(t.cfg) })
+          const data = await res.json().catch(() => ({}))
+          if (!res.ok || data.error) throw new Error(data.error || `分片 ${n} 上传失败`)
+          parts.push({ n, etag: data.etag })
+          loadedBytes += blob.size
+          t.loaded = loadedBytes
+        }
+      }
+      try {
+        await Promise.all([worker(), worker(), worker()])
+        parts.sort((a, b) => a.n - b.n)
+        await s3opFor(t, { op: 'multipartComplete', bucket: t.bucket, key: t.key, uploadId, parts })
+      } catch (e) {
+        await s3opFor(t, { op: 'multipartAbort', bucket: t.bucket, key: t.key, uploadId }).catch(() => {})
+        throw e
+      }
+    }
+    function s3opFor(t, payload) {
+      return s3opCfg(t.cfg, payload)
+    }
+
+    /* ---------- 批量 ---------- */
+    function batchDownload() {
+      for (const key of selected.value) {
+        const e = entries.value.find((x) => x.key === key)
+        addDownloadTask(e || { key, name: key.split('/').pop(), size: 0 })
+      }
+    }
+    async function batchDelete() {
+      const keys = [...selected.value]
+      if (!(await showConfirm('批量删除', `确定删除选中的 ${keys.length} 个文件？此操作不可恢复。`, '删除'))) return
+      try {
+        await s3op({ op: 'deleteMany', bucket: bucket.value, keys })
+        selected.value = new Set()
+        toast(`已删除 ${keys.length} 个文件`); refreshList()
+      } catch (e) { toast('批量删除失败：' + e.message) }
+    }
+    function openCopyModal(mode) {
+      copyModal.mode = mode
+      copyModal.keys = [...selected.value]
+      copyModal.bucket = bucket.value
+      copyModal.prefix = prefix.value
+      copyModal.open = true
+    }
+    function doCopy() {
+      const dstBucket = copyModal.bucket.trim()
+      let dstPrefix = copyModal.prefix.trim()
+      if (!dstBucket) { toast('目标 Bucket 必填'); return }
+      if (dstPrefix && !dstPrefix.endsWith('/')) dstPrefix += '/'
+      copyModal.open = false
+      const t = addTask({
+        kind: 'copy', name: `${copyModal.mode === 'copy' ? '复制' : '移动'} ${copyModal.keys.length} 个文件 → ${dstBucket}/${dstPrefix}`,
+        keys: [...copyModal.keys], dstBucket, dstPrefix, move: copyModal.mode === 'move', size: copyModal.keys.length, loaded: 0
+      })
+      runCopyBatch(t)
+    }
+    async function runCopyBatch(t) {
+      try {
+        for (let i = t.loaded || 0; i < t.keys.length; i++) {
+          if (taskSignal(t)?.aborted) throw new DOMException('aborted', 'AbortError')
+          const srcKey = t.keys[i]
+          const dstKey = (t.dstPrefix || '') + srcKey.split('/').pop()
+          if (!(t.bucket === t.dstBucket && srcKey === dstKey)) {
+            await s3opFor(t, { op: 'copy', srcBucket: t.bucket, srcKey, dstBucket: t.dstBucket, dstKey })
+            if (t.move) await s3opFor(t, { op: 'delete', bucket: t.bucket, key: srcKey })
+          }
+          t.loaded = i + 1
+        }
+        finishTask(t, 'done')
+        if (t.connId === connId.value) { selected.value = new Set(); refreshList() }
+      } catch (e) {
+        if (e.name === 'AbortError') finishTask(t, 'canceled')
+        else finishTask(t, 'failed', e.message)
+      }
+    }
+
+    /* ---------- 预签名 ---------- */
+    let presignInputEl = null
+    async function openPresign(key) {
+      presign.key = key
+      presign.open = true
+      await regenPresign()
+    }
+    async function regenPresign() {
+      try {
+        const data = await s3op({ op: 'presign', bucket: bucket.value, key: presign.key, expires: presign.expires })
+        presign.url = data.url
+      } catch (e) { toast('生成链接失败：' + e.message) }
+    }
+    async function copyPresign() {
+      try { await navigator.clipboard.writeText(presign.url); toast('链接已复制') }
+      catch (_) { if (presignInputEl) { presignInputEl.select(); document.execCommand('copy') } toast('链接已复制') }
+    }
+
+    /* ---------- 预览 ---------- */
+    function previewKindOf(name) {
+      const ext = (name.split('.').pop() || '').toLowerCase()
+      if (['png', 'jpg', 'jpeg', 'gif', 'webp', 'bmp', 'svg', 'avif', 'ico'].includes(ext)) return 'image'
+      if (['mp4', 'webm', 'mov', 'mkv'].includes(ext)) return 'video'
+      if (['mp3', 'wav', 'flac', 'ogg', 'm4a'].includes(ext)) return 'audio'
+      if (ext === 'pdf') return 'pdf'
+      if (ext === 'md' || ext === 'markdown') return 'markdown'
+      if (ext === 'html' || ext === 'htm') return 'html'
+      if (['doc', 'docx', 'xls', 'xlsx', 'ppt', 'pptx', 'odt', 'ods', 'odp'].includes(ext)) return 'office'
+      if (['stl', 'obj', 'glb', 'gltf'].includes(ext)) return '3d'
+      if (['txt', 'log', 'json', 'js', 'ts', 'jsx', 'tsx', 'py', 'java', 'go', 'rs', 'c', 'cpp', 'h', 'css', 'scss', 'xml', 'yml', 'yaml', 'toml', 'ini', 'conf', 'sh', 'sql', 'csv', 'tsv'].includes(ext)) return 'text'
+      return 'unknown'
+    }
+    let htmlBoxEl = null
+    let glCanvasEl = null
+    async function fetchObject(entry, as) {
+      const url = PROXY + '/download?' + qs({ bucket: bucket.value, key: entry.key })
+      const res = await fetch(url, { headers: cfgHeader(cfgOf(curConn.value)) })
+      if (!res.ok) { const d = await res.json().catch(() => ({})); throw new Error(d.error || `HTTP ${res.status}`) }
+      return as === 'text' ? res.text() : as === 'buffer' ? res.arrayBuffer() : res.blob()
+    }
+    async function openPreview(entry) {
+      preview.entry = entry
+      preview.open = true
+      preview.loading = true
+      preview.error = ''
+      preview.kind = ''
+      if (previewObjectUrl) { URL.revokeObjectURL(previewObjectUrl); previewObjectUrl = null }
+      const kind = previewKindOf(entry.name)
+      try {
+        if (kind === 'image') {
+          const blob = await fetchObject(entry, 'blob')
+          previewObjectUrl = URL.createObjectURL(blob)
+          preview.url = previewObjectUrl
+          preview.kind = 'image'
+        } else if (kind === 'text' || kind === 'markdown' || kind === 'html') {
+          let text = await fetchObject(entry, 'text')
+          const truncated = text.length > 512 * 1024
+          if (truncated) text = text.slice(0, 512 * 1024)
+          if (kind === 'text') { preview.text = text + (truncated ? '\n\n…（已截断，仅显示前 512KB）' : ''); preview.kind = 'text' }
+          else if (kind === 'markdown') { preview.html = renderMarkdown(text) + (truncated ? '<p>…（已截断）</p>' : ''); preview.kind = 'markdown' }
+          else {
+            preview.kind = 'html'
+            preview.loading = false
+            await nextTick()
+            if (htmlBoxEl) { htmlBoxEl.innerHTML = ''; htmlBoxEl.appendChild(sanitizeHtml(text)) }
+          }
+        } else if (kind === '3d') {
+          const buf = await fetchObject(entry, 'buffer')
+          preview.kind = '3d'
+          preview.loading = false
+          await nextTick()
+          if (glCanvasEl) init3DViewer(glCanvasEl, entry.name, buf, (msg) => { preview.error = msg })
+        } else if (['video', 'audio', 'pdf', 'office'].includes(kind)) {
+          const data = await s3op({ op: 'presign', bucket: bucket.value, key: entry.key, expires: 3600 })
+          preview.url = data.url
+          preview.kindName = { video: '视频', audio: '音频', pdf: 'PDF', office: 'Office 文档' }[kind]
+          preview.officeViewer = kind === 'office' ? 'https://view.officeapps.live.com/op/embed.aspx?src=' + encodeURIComponent(data.url) : ''
+          preview.kind = 'linkcard'
+        } else {
+          preview.kind = 'unknown'
+        }
+      } catch (e) { preview.error = e.message } finally { preview.loading = false; resize() }
+    }
+    function closePreview() {
+      preview.open = false
+      if (previewObjectUrl) { URL.revokeObjectURL(previewObjectUrl); previewObjectUrl = null }
+    }
+
+    /* ---------- Markdown / HTML / 3D（与上一版相同实现） ---------- */
+    function sanitizeHtml(htmlText) {
+      const doc = new DOMParser().parseFromString(htmlText, 'text/html')
+      const banned = ['script', 'style', 'iframe', 'object', 'embed', 'form', 'link', 'meta', 'base', 'title']
+      for (const tag of banned) doc.querySelectorAll(tag).forEach((el) => el.remove())
+      const walker = doc.createTreeWalker(doc.body, NodeFilter.SHOW_ELEMENT)
+      const els = []
+      while (walker.nextNode()) els.push(walker.currentNode)
+      for (const el of els) {
+        for (const attr of [...el.attributes]) {
+          const n = attr.name.toLowerCase(), v = attr.value.trim().toLowerCase()
+          if (n.startsWith('on') || ((n === 'href' || n === 'src' || n === 'xlink:href') && (v.startsWith('javascript:') || v.startsWith('data:text/html')))) el.removeAttribute(attr.name)
+        }
+        if (el.tagName === 'IMG' && el.getAttribute('src') && !/^(https?:|data:image\/|blob:)/i.test(el.getAttribute('src'))) el.removeAttribute('src')
+      }
+      const wrap = document.createElement('div')
+      wrap.innerHTML = doc.body.innerHTML
+      return wrap
+    }
+    function escHtml(s) { return String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c])) }
+    function mdInline(s) {
+      return s
+        .replace(/`([^`]+)`/g, '<code>$1</code>')
+        .replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')
+        .replace(/(^|[^*])\*([^*]+)\*/g, '$1<em>$2</em>')
+        .replace(/!\[([^\]]*)\]\((https?:[^)\s]+)\)/g, '<img src="$2" alt="$1" style="max-width:100%">')
+        .replace(/\[([^\]]+)\]\((https?:[^)\s]+)\)/g, '<a href="$2" target="_blank" rel="noreferrer">$1</a>')
+    }
+    function renderMarkdown(src) {
+      const lines = src.split('\n')
+      let html = '', inCode = false, codeBuf = [], listType = null, inTable = false
+      const closeList = () => { if (listType) { html += listType === 'ul' ? '</ul>' : '</ol>'; listType = null } }
+      const closeTable = () => { if (inTable) { html += '</table>'; inTable = false } }
+      for (const line of lines) {
+        if (/^```/.test(line.trim())) {
+          if (inCode) { html += `<pre><code>${escHtml(codeBuf.join('\n'))}</code></pre>`; codeBuf = []; inCode = false } else inCode = true
+          continue
+        }
+        if (inCode) { codeBuf.push(line); continue }
+        const t = line.trim()
+        if (/^\|.*\|$/.test(t)) {
+          if (/^\|[\s:|-]+\|$/.test(t)) continue
+          const cells = t.slice(1, -1).split('|').map((c) => c.trim())
+          if (!inTable) { html += '<table>'; inTable = true; html += '<tr>' + cells.map((c) => `<th>${mdInline(escHtml(c))}</th>`).join('') + '</tr>' }
+          else html += '<tr>' + cells.map((c) => `<td>${mdInline(escHtml(c))}</td>`).join('') + '</tr>'
+          continue
+        }
+        closeTable()
+        const h = t.match(/^(#{1,6})\s+(.*)$/)
+        if (h) { closeList(); html += `<h${h[1].length}>${mdInline(escHtml(h[2]))}</h${h[1].length}>`; continue }
+        if (/^(-{3,}|\*{3,})$/.test(t)) { closeList(); html += '<hr>'; continue }
+        if (/^>\s?/.test(t)) { closeList(); html += `<blockquote>${mdInline(escHtml(t.replace(/^>\s?/, '')))}</blockquote>`; continue }
+        const ul = t.match(/^[-*+]\s+(.*)$/)
+        if (ul) { if (listType !== 'ul') { closeList(); html += '<ul>'; listType = 'ul' } html += `<li>${mdInline(escHtml(ul[1]))}</li>`; continue }
+        const ol = t.match(/^\d+[.)]\s+(.*)$/)
+        if (ol) { if (listType !== 'ol') { closeList(); html += '<ol>'; listType = 'ol' } html += `<li>${mdInline(escHtml(ol[1]))}</li>`; continue }
+        closeList()
+        if (t) html += `<p>${mdInline(escHtml(t))}</p>`
+      }
+      if (inCode) html += `<pre><code>${escHtml(codeBuf.join('\n'))}</code></pre>`
+      closeList(); closeTable()
+      return html
+    }
+    function computeNormals(pos, idx) {
+      const n = new Float32Array(pos.length)
+      const faces = idx || [...Array(pos.length / 3).keys()]
+      for (let f = 0; f < faces.length; f += 3) {
+        const a = faces[f] * 3, b = faces[f + 1] * 3, c = faces[f + 2] * 3
+        const ux = pos[b] - pos[a], uy = pos[b + 1] - pos[a + 1], uz = pos[b + 2] - pos[a + 2]
+        const vx = pos[c] - pos[a], vy = pos[c + 1] - pos[a + 1], vz = pos[c + 2] - pos[a + 2]
+        const nx = uy * vz - uz * vy, ny = uz * vx - ux * vz, nz = ux * vy - uy * vx
+        for (const v of [a, b, c]) { n[v] += nx; n[v + 1] += ny; n[v + 2] += nz }
+      }
+      for (let i = 0; i < n.length; i += 3) { const l = Math.hypot(n[i], n[i + 1], n[i + 2]) || 1; n[i] /= l; n[i + 1] /= l; n[i + 2] /= l }
+      return n
+    }
+    function parseModel(name, buf) {
+      const ext = (name.split('.').pop() || '').toLowerCase()
+      if (ext === 'stl') {
+        const dv = new DataView(buf)
+        if (buf.byteLength >= 84 && 84 + dv.getUint32(80, true) * 50 === buf.byteLength) {
+          const count = dv.getUint32(80, true)
+          const pos = new Float32Array(count * 9)
+          let o = 84
+          for (let i = 0; i < count; i++) {
+            for (let v = 0; v < 3; v++) {
+              pos[i * 9 + v * 3] = dv.getFloat32(o + 12 + v * 12, true)
+              pos[i * 9 + v * 3 + 1] = dv.getFloat32(o + 16 + v * 12, true)
+              pos[i * 9 + v * 3 + 2] = dv.getFloat32(o + 20 + v * 12, true)
+            }
+            o += 50
+          }
+          return { positions: pos, indices: null }
+        }
+        const text = new TextDecoder().decode(buf)
+        const vals = []
+        const re = /vertex\s+([\d.eE+-]+)\s+([\d.eE+-]+)\s+([\d.eE+-]+)/g
+        let m
+        while ((m = re.exec(text))) vals.push(Number(m[1]), Number(m[2]), Number(m[3]))
+        return { positions: new Float32Array(vals), indices: null }
+      }
+      if (ext === 'obj') {
+        const text = new TextDecoder().decode(buf)
+        const verts = [], pos = [], idx = []
+        for (const line of text.split('\n')) {
+          const p = line.trim().split(/\s+/)
+          if (p[0] === 'v') verts.push([Number(p[1]), Number(p[2]), Number(p[3])])
+          else if (p[0] === 'f') {
+            const f = p.slice(1).map((s) => parseInt(s.split('/')[0], 10) - 1)
+            for (let i = 1; i + 1 < f.length; i++) idx.push(f[0], f[i], f[i + 1])
+          }
+        }
+        for (const v of verts) pos.push(v[0], v[1], v[2])
+        return { positions: new Float32Array(pos), indices: new Uint32Array(idx) }
+      }
+      if (ext === 'glb' || ext === 'gltf') {
+        let json, bin
+        if (ext === 'glb') {
+          const dv = new DataView(buf)
+          if (dv.getUint32(0, true) !== 0x46546c67) throw new Error('GLB 文件头无效')
+          let o = 12
+          while (o < buf.byteLength) {
+            const len = dv.getUint32(o, true), type = dv.getUint32(o + 4, true)
+            const data = buf.slice(o + 8, o + 8 + len)
+            if (type === 0x4e4f534a) json = JSON.parse(new TextDecoder().decode(data))
+            else if (type === 0x004e4942) bin = data
+            o += 8 + len
+          }
+        } else {
+          json = JSON.parse(new TextDecoder().decode(buf))
+          const uri = json.buffers?.[0]?.uri || ''
+          if (!uri.startsWith('data:')) throw new Error('该 glTF 引用了外部 .bin 文件，请改用自包含的 GLB 格式预览')
+          bin = Uint8Array.from(atob(uri.split(',')[1]), (c) => c.charCodeAt(0)).buffer
+        }
+        const accData = (idx) => {
+          const acc = json.accessors[idx]
+          const view = json.bufferViews[acc.bufferView]
+          const off = (view.byteOffset || 0) + (acc.byteOffset || 0)
+          const nComp = { SCALAR: 1, VEC2: 2, VEC3: 3, VEC4: 4 }[acc.type]
+          const Ctor = { 5121: Uint8Array, 5123: Uint16Array, 5125: Uint32Array, 5126: Float32Array }[acc.componentType]
+          return new Ctor(bin, off, acc.count * nComp)
+        }
+        const prim = json.meshes[0].primitives[0]
+        const positions = accData(prim.attributes.POSITION)
+        let indices = null
+        if (prim.indices !== undefined) { const raw = accData(prim.indices); indices = raw instanceof Uint32Array ? raw : new Uint32Array(raw) }
+        return { positions: positions instanceof Float32Array ? positions : new Float32Array(positions), indices }
+      }
+      throw new Error('不支持的 3D 格式')
+    }
+    function init3DViewer(canvas, name, buf, onError) {
+      let model
+      try { model = parseModel(name, buf) } catch (e) { onError('3D 解析失败：' + e.message); return }
+      const gl = canvas.getContext('webgl2')
+      if (!gl) { onError('当前环境不支持 WebGL2'); return }
+      const pos = model.positions
+      let min = [Infinity, Infinity, Infinity], max = [-Infinity, -Infinity, -Infinity]
+      for (let i = 0; i < pos.length; i += 3) for (let a = 0; a < 3; a++) { min[a] = Math.min(min[a], pos[i + a]); max[a] = Math.max(max[a], pos[i + a]) }
+      const center = min.map((v, a) => (v + max[a]) / 2)
+      const scale = 2 / (Math.max(...max.map((v, a) => v - min[a])) || 1)
+      const norm = new Float32Array(pos.length)
+      for (let i = 0; i < pos.length; i += 3) for (let a = 0; a < 3; a++) norm[i + a] = (pos[i + a] - center[a]) * scale
+      const normals = computeNormals(norm, model.indices)
+      const vs = `#version 300 es
+        layout(location=0) in vec3 p; layout(location=1) in vec3 n;
+        uniform mat4 mvp; uniform mat4 mv; out vec3 vn;
+        void main(){ vn = normalize(mat3(mv) * n); gl_Position = mvp * vec4(p, 1.0); }`
+      const fs = `#version 300 es
+        precision mediump float; in vec3 vn; out vec4 o;
+        void main(){ float d = abs(dot(normalize(vn), normalize(vec3(0.35, 0.6, 0.75))));
+          o = vec4(vec3(0.45, 0.62, 0.95) * (0.25 + 0.75 * d), 1.0); }`
+      function shader(type, src) { const s = gl.createShader(type); gl.shaderSource(s, src); gl.compileShader(s); return s }
+      const prog = gl.createProgram()
+      gl.attachShader(prog, shader(gl.VERTEX_SHADER, vs))
+      gl.attachShader(prog, shader(gl.FRAGMENT_SHADER, fs))
+      gl.linkProgram(prog); gl.useProgram(prog)
+      function vbo(data, loc) { const b = gl.createBuffer(); gl.bindBuffer(gl.ARRAY_BUFFER, b); gl.bufferData(gl.ARRAY_BUFFER, data, gl.STATIC_DRAW); gl.enableVertexAttribArray(loc); gl.vertexAttribPointer(loc, 3, gl.FLOAT, false, 0, 0) }
+      vbo(norm, 0); vbo(normals, 1)
+      let indexCount = 0
+      if (model.indices) {
+        const ib = gl.createBuffer()
+        gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, ib)
+        gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, model.indices, gl.STATIC_DRAW)
+        indexCount = model.indices.length
+      }
+      const uMvp = gl.getUniformLocation(prog, 'mvp'), uMv = gl.getUniformLocation(prog, 'mv')
+      function matMul(a, b) { const o = new Float32Array(16); for (let r = 0; r < 4; r++) for (let c = 0; c < 4; c++) { let s = 0; for (let k = 0; k < 4; k++) s += a[k * 4 + r] * b[c * 4 + k]; o[c * 4 + r] = s } return o }
+      function perspective(fov, asp, near, far) { const f = 1 / Math.tan(fov / 2), o = new Float32Array(16); o[0] = f / asp; o[5] = f; o[10] = (far + near) / (near - far); o[11] = -1; o[14] = 2 * far * near / (near - far); return o }
+      function rotX(a) { const c = Math.cos(a), s = Math.sin(a); return new Float32Array([1, 0, 0, 0, 0, c, s, 0, 0, -s, c, 0, 0, 0, 0, 1]) }
+      function rotY(a) { const c = Math.cos(a), s = Math.sin(a); return new Float32Array([c, 0, -s, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1]) }
+      let rx = 0.5, ry = 0.7, dist = 3.2, dragging = false, lx = 0, ly = 0
+      canvas.addEventListener('pointerdown', (e) => { dragging = true; lx = e.clientX; ly = e.clientY; canvas.setPointerCapture(e.pointerId) })
+      canvas.addEventListener('pointermove', (e) => { if (!dragging) return; ry += (e.clientX - lx) * 0.01; rx += (e.clientY - ly) * 0.01; lx = e.clientX; ly = e.clientY })
+      canvas.addEventListener('pointerup', () => { dragging = false })
+      canvas.addEventListener('wheel', (e) => { e.preventDefault(); dist = Math.min(10, Math.max(1.4, dist + e.deltaY * 0.003)) }, { passive: false })
+      function draw() {
+        if (!document.body.contains(canvas)) return
+        const w = canvas.clientWidth * devicePixelRatio, h = canvas.clientHeight * devicePixelRatio
+        if (canvas.width !== w || canvas.height !== h) { canvas.width = w; canvas.height = h }
+        gl.viewport(0, 0, canvas.width, canvas.height)
+        gl.enable(gl.DEPTH_TEST)
+        gl.clearColor(0.09, 0.09, 0.12, 1); gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT)
+        let mv = new Float32Array([1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, -dist, 1])
+        mv = matMul(mv, matMul(rotX(rx), rotY(ry)))
+        const mvp = matMul(perspective(0.8, canvas.width / canvas.height, 0.1, 100), mv)
+        gl.uniformMatrix4fv(uMvp, false, mvp)
+        gl.uniformMatrix4fv(uMv, false, mv)
+        if (indexCount) gl.drawElements(gl.TRIANGLES, indexCount, gl.UNSIGNED_INT, 0)
+        else gl.drawArrays(gl.TRIANGLES, 0, norm.length / 3)
+        requestAnimationFrame(draw)
+      }
+      draw()
+    }
+
+    onMounted(async () => {
+      try {
+        const savedTheme = await storeBridge.get('ui-theme')
+        if (savedTheme === 'light' || savedTheme === 'dark') {
+          uiTheme.value = savedTheme
+          if (window.__osSetTheme) window.__osSetTheme(savedTheme)
+        }
+      } catch (_) { /* ignore */ }
+      try {
+        const saved = (await storeBridge.get('download-retries')) || []
+        for (const d of saved) {
+          const t = addTask({ kind: 'download', name: d.name, key: d.key, size: d.size || 0 })
+          t.cfg = d.cfg; t.bucket = d.bucket
+          t.status = 'failed'; t.error = d.error || '失败'
+        }
+      } catch (_) { /* ignore */ }
+      await loadConnections()
+      resize()
+    })
+
+    /* ---------- 渲染（render 函数；宿主 CSP 禁止模板编译） ---------- */
+    const ib = (title, icon, fn) => h('button', { class: 'icon-btn', title, innerHTML: icon, onClick: fn })
+    function renderNoConn() {
+      return h('div', { class: 'no-session' }, [
+        h('div', { class: 'big' }, '对象存储'),
+        h('p', { innerHTML: '添加一个存储连接后即可浏览、上传、下载与预览对象。<br>支持阿里云 OSS 与全部 S3 兼容服务（MinIO、AWS S3、R2、COS、OBS、B2 等）。' }),
+        h('p', { style: { marginTop: '14px' } }, [h('button', { class: 'btn', onClick: () => openConnEditor(null) }, '＋ 新建连接')]),
+        pageError.value ? h('p', { class: 'err-text', style: { marginTop: '10px' } }, pageError.value) : null
+      ])
+    }
+    function renderConnEditor() {
+      const f = editor
+      const text = (label, key, opts = {}) => h('div', { class: 'form-row' }, [
+        h('label', label),
+        h('input', { value: f[key], type: opts.type || 'text', placeholder: opts.ph || '', onInput: (e) => { f[key] = e.target.value } })
+      ])
+      return h('div', { class: 'mask' }, [
+        h('div', { class: 'modal' }, [
+          h('h2', f.id ? '编辑连接' : '新建连接'),
+          text('名称', 'name', { ph: '如：生产 OSS' }),
+          h('div', { class: 'form-row' }, [
+            h('label', '服务商预设'),
+            h('select', { value: f.preset, onChange: (e) => { f.preset = e.target.value; applyPreset() } },
+              Object.entries(PRESETS).map(([k, p]) => h('option', { value: k, key: k }, p.label)))
+          ]),
+          text('Endpoint', 'endpoint', { ph: 'https://s3.oss-cn-hangzhou.aliyuncs.com' }),
+          text('Region', 'region', { ph: 'us-east-1' }),
+          text('默认 Bucket（可选）', 'bucket'),
+          text('Access Key ID', 'ak'),
+          text('Secret Access Key', 'sk', { type: 'password' }),
+          h('div', { class: 'form-row' }, [
+            h('label', { class: 'check-row' }, [
+              h('input', { type: 'checkbox', checked: f.pathStyle, onChange: (e) => { f.pathStyle = e.target.checked } }),
+              h('span', 'Path-Style 寻址（MinIO / 自建 S3 通常开启；OSS / AWS S3 关闭）')
+            ])
+          ]),
+          f.testMsg ? h('div', { class: f.testOk ? 'ok-text' : 'err-text', style: { marginBottom: '6px' } }, f.testMsg) : null,
+          h('div', { class: 'foot' }, [
+            f.id ? h('button', { class: ['btn', 'danger'], style: { marginRight: 'auto' }, onClick: deleteEditorConn }, '删除连接') : null,
+            h('button', { class: ['btn', 'ghost'], onClick: testEditor, disabled: f.testing }, f.testing ? '测试中…' : '测试连接'),
+            h('button', { class: ['btn', 'ghost'], onClick: () => { editor.open = false } }, '取消'),
+            h('button', { class: 'btn', onClick: saveEditor }, '保存')
+          ])
+        ])
+      ])
+    }
+    function renderLayout() {
+      return h('div', { class: 'layout' }, [
+        h('div', { class: 'side' }, [
+          h('div', { class: 'side-box' }, [
+            h('div', { class: 'side-head' }, [
+              h('span', '存储连接'),
+              h('button', { class: 'icon-btn', title: '新建连接', innerHTML: I.plus, onClick: () => openConnEditor(null) })
+            ]),
+            ...connections.value.map((c) => h('div', {
+              class: ['conn-item', { active: c.id === connId.value }], key: c.id,
+              onClick: () => selectConnection(c.id)
+            }, [
+              h('span', { class: 'conn-avatar', style: avatarStyle(c.name) }, (c.name || '?').charAt(0).toUpperCase()),
+              h('span', { class: 'conn-meta' }, [
+                h('span', { class: 'conn-name' }, c.name),
+                h('span', { class: 'conn-sub' }, presetLabelOf(c) + ' · ' + hostOf(c.endpoint))
+              ]),
+              h('button', { class: 'icon-btn', title: '编辑连接', innerHTML: I.edit, onClick: (e) => { e.stopPropagation(); openConnEditor(c) } })
+            ]))
+          ]),
+          h('div', { class: 'side-box' }, [
+            h('div', { class: 'side-head' }, [
+              h('span', 'Bucket'),
+              h('button', { class: 'icon-btn', title: '列出全部 Bucket', innerHTML: I.refresh, onClick: () => fetchBuckets() })
+            ]),
+            buckets.value.length ? null : h('div', { class: 'empty-hint' }, '尚未列出（点右上角刷新）'),
+            ...buckets.value.map((b) => h('div', {
+              class: ['bucket-item', { active: b === bucket.value }], key: b,
+              onClick: () => openBucket(b)
+            }, [h('span', { innerHTML: I.bucket }), h('span', { class: 'grow' }, b)])),
+            h('div', { class: 'bucket-join' }, [
+              h('input', {
+                class: 'text-input', style: { flex: 1, minWidth: 0 }, placeholder: '手动输入 bucket',
+                value: bucketInput.value,
+                onInput: (e) => { bucketInput.value = e.target.value },
+                onKeydown: (e) => { if (e.key === 'Enter') openBucket(bucketInput.value.trim()) }
+              }),
+              h('button', { class: ['btn', 'small'], onClick: () => openBucket(bucketInput.value.trim()) }, '打开')
+            ])
+          ]),
+          h('div', { class: 'side-box' }, [
+            h('div', { class: 'tip-text' }, 'S3 协议交互（SigV4 签名、分片上传、预签名）由 NewShell 主进程中的本插件代理执行，渲染页不做签名、不直连存储服务，无需为 Bucket 配置 CORS。连接配置只保存在 NewShell 本地插件数据中。')
+          ])
+        ]),
+        h('div', { class: 'main' }, [
+          h('div', { class: 'crumbs' }, bucket.value ? [
+            h('span', { class: ['crumb', 'root'], onClick: () => gotoPrefix('') }, [h('span', { innerHTML: I.bucket }), bucket.value]),
+            ...crumbParts.value.flatMap((c) => [
+              h('span', { class: 'sep' }, '/'),
+              h('span', { class: 'crumb', onClick: () => gotoPrefix(c.prefix) }, c.name)
+            ])
+          ] : [h('span', { class: 'empty-hint' }, '未打开 Bucket')]),
+          h('div', { class: 'toolbar' }, [
+            h('button', { class: 'btn', onClick: triggerUpload }, [h('span', { innerHTML: I.upload }), '上传文件']),
+            h('input', { type: 'file', multiple: true, hidden: true, ref: (el) => { fileInputEl = el }, onChange: onFilesPicked }),
+            h('button', { class: ['btn', 'ghost'], onClick: newFolder }, [h('span', { innerHTML: I.folderPlus }), '新建文件夹']),
+            h('button', { class: ['btn', 'ghost'], onClick: refreshList }, [h('span', { innerHTML: I.refresh }), '刷新']),
+            h('span', { style: { flex: 1 } }),
+            h('input', {
+              class: 'text-input', style: { width: '190px' }, placeholder: '按前缀搜索（回车）',
+              value: prefixSearchText.value,
+              onInput: (e) => { prefixSearchText.value = e.target.value },
+              onKeydown: (e) => { if (e.key === 'Enter') doPrefixSearch() }
+            })
+          ]),
+          selected.value.size ? h('div', { class: ['toolbar', 'batch-bar'] }, [
+            h('span', { class: 'sel-info' }, `已选 ${selected.value.size} 个文件`),
+            h('button', { class: ['btn', 'ghost', 'small'], onClick: batchDownload }, '批量下载'),
+            h('button', { class: ['btn', 'ghost', 'small'], onClick: () => openCopyModal('copy') }, '批量复制'),
+            h('button', { class: ['btn', 'ghost', 'small'], onClick: () => openCopyModal('move') }, '批量移动'),
+            h('button', { class: ['btn', 'danger', 'small'], onClick: batchDelete }, '批量删除'),
+            h('button', { class: ['btn', 'ghost', 'small'], onClick: clearSelection }, '取消选择')
+          ]) : null,
+          h('div', { class: 'list-wrap' }, [
+            h('div', { class: 'list-head' }, [
+              h('span', [h('input', { type: 'checkbox', checked: allChecked.value, onChange: toggleAll })]),
+              h('span', '名称'), h('span', '大小'), h('span', { class: 'c-date' }, '最后修改'),
+              h('span', { style: { textAlign: 'right' } }, '操作')
+            ]),
+            h('div', { class: 'viewport', onScroll }, [
+              h('div', { class: 'spacer', style: { height: entries.value.length * ROW_H + 'px' } },
+                entries.value.length ? visibleEntries.value.map((e) => renderRow(e)) : [
+                  h('div', { class: 'list-empty' }, [
+                    h('div', { class: 'big' }, loading.value ? '加载中…' : '此目录为空'),
+                    loading.value ? null : h('div', '上传文件或新建文件夹开始使用')
+                  ])
+                ])
+            ]),
+            h('div', { class: 'list-foot' }, [
+              h('span', listStatus.value),
+              h('span', { style: { flex: 1 } }),
+              nextToken.value ? h('button', { class: ['btn', 'ghost', 'small'], onClick: loadMore }, '加载更多') : null
+            ])
+          ]),
+          h('div', { class: 'tasks' }, [
+            h('div', { class: 'tasks-head', onClick: () => { tasksOpen.value = !tasksOpen.value } }, [
+              h('span', { innerHTML: I.swap }),
+              h('span', '传输任务中心'),
+              activeTasks.value ? h('span', { class: 'badge' }, `${activeTasks.value} 进行中`) : null,
+              failedTasks.value ? h('span', { class: ['badge', 'err'] }, `${failedTasks.value} 失败`) : null,
+              h('span', { style: { flex: 1 } }),
+              h('button', { class: ['btn', 'ghost', 'small'], onClick: (e) => { e.stopPropagation(); clearFinishedTasks() } }, '清除已完成'),
+              h('span', tasksOpen.value ? '▾' : '▸')
+            ]),
+            h('div', { style: { display: tasksOpen.value ? '' : 'none' } },
+              tasks.value.length ? tasks.value.map((t) => h('div', { class: 'task', key: t.id }, [
+                h('div', { class: 't-row' }, [
+                  h('span', { class: 't-ico', innerHTML: taskIcon(t) }),
+                  h('span', { class: 't-name', title: t.key || t.name }, t.name),
+                  h('span', { class: ['t-status', t.status] }, taskStatusText(t)),
+                  t.status === 'running' ? h('button', { class: ['btn', 'ghost', 'small'], onClick: () => cancelTask(t) }, '取消') : null,
+                  t.status === 'failed' ? h('button', { class: ['btn', 'small'], onClick: () => retryTask(t) }, '↻ 重试') : null,
+                  t.status !== 'running' ? h('button', { class: ['btn', 'ghost', 'small'], onClick: () => removeTask(t) }, '移除') : null
+                ]),
+                h('div', { class: 'bar' }, [h('i', { class: t.status, style: { width: taskPct(t) + '%' } })])
+              ])) : [h('div', { style: { padding: '12px', color: 'var(--text-muted)', fontSize: '12px' } }, '暂无传输任务')])
+          ])
+        ])
+      ])
+    }
+    function renderRow(e) {
+      return h('div', {
+        class: ['row', { selected: selected.value.has(e.key) }], key: e.key,
+        style: { top: e._idx * ROW_H + 'px' }
+      }, [
+        h('span', e.isDir ? [] : [h('input', { type: 'checkbox', checked: selected.value.has(e.key), onChange: (ev) => toggleSelect(e, ev) })]),
+        h('span', {
+          class: ['name', { dir: e.isDir }],
+          onClick: () => { if (e.isDir) gotoPrefix(e.key) },
+          onDblclick: () => { if (!e.isDir) openPreview(e) }
+        }, [
+          h('span', { class: ['file-tile', { dir: e.isDir }], innerHTML: tileIcon(e) }),
+          h('span', { class: 'fname', title: e.key }, e.name + (e.isDir ? '/' : ''))
+        ]),
+        h('span', { class: 'meta' }, e.isDir ? '-' : fmtSize(e.size)),
+        h('span', { class: 'meta c-date' }, e.mtime ? fmtTime(e.mtime) : '-'),
+        h('span', { class: 'acts' }, e.isDir ? [
+          ib('进入', I.enter, () => gotoPrefix(e.key)),
+          ib('删除此文件夹（含全部内容）', I.trash, () => deleteDir(e))
+        ] : [
+          ib('预览', I.eye, () => openPreview(e)),
+          ib('下载', I.download, () => addDownloadTask(e)),
+          ib('预签名分享链接', I.link, () => openPresign(e.key)),
+          ib('重命名/移动', I.edit, () => renameEntry(e)),
+          ib('删除', I.trash, () => deleteEntry(e))
+        ])
+      ])
+    }
+    function maskWrap(onSelfClose, modalChildren, wide) {
+      return h('div', {
+        class: 'mask',
+        onClick: (e) => { if (e.target === e.currentTarget) onSelfClose() }
+      }, [h('div', { class: ['modal', { wide: !!wide }] }, modalChildren)])
+    }
+    function renderPresign() {
+      return maskWrap(() => { presign.open = false }, [
+        h('h2', '预签名链接（免登录分享）'),
+        h('div', { class: 'form-row' }, [h('label', '对象'), h('input', { readonly: true, value: presign.key })]),
+        h('div', { class: 'form-row' }, [
+          h('label', '有效期'),
+          h('select', {
+            value: presign.expires,
+            onChange: (e) => { presign.expires = Number(e.target.value); regenPresign() }
+          }, [
+            h('option', { value: 900 }, '15 分钟'),
+            h('option', { value: 3600 }, '1 小时'),
+            h('option', { value: 21600 }, '6 小时'),
+            h('option', { value: 86400 }, '24 小时'),
+            h('option', { value: 604800 }, '7 天（上限）')
+          ])
+        ]),
+        h('div', { class: 'form-row' }, [
+          h('label', '链接'),
+          h('input', { readonly: true, value: presign.url, ref: (el) => { presignInputEl = el } }),
+          h('div', { class: 'hint' }, '任何人凭此链接在有效期内可直接下载该对象，无需密钥。请勿公开传播敏感文件链接。')
+        ]),
+        h('div', { class: 'foot' }, [
+          h('button', { class: ['btn', 'ghost'], onClick: () => { presign.open = false } }, '关闭'),
+          h('button', { class: 'btn', onClick: copyPresign }, '复制链接')
+        ])
+      ])
+    }
+    function renderPreviewBody() {
+      if (preview.loading) return h('span', [h('span', { class: 'spin' }, '⏳'), ' 加载中…'])
+      if (preview.error) return h('div', { class: 'err-text' }, '预览失败：' + preview.error)
+      if (preview.kind === 'image') return h('img', { src: preview.url, alt: '' })
+      if (preview.kind === 'text') return h('pre', preview.text)
+      if (preview.kind === 'markdown') return h('div', { class: 'md-body', innerHTML: preview.html })
+      if (preview.kind === 'html') return h('div', { class: 'md-body', ref: (el) => { htmlBoxEl = el } })
+      if (preview.kind === '3d') return h('canvas', { id: 'glCanvas', ref: (el) => { glCanvasEl = el } })
+      if (preview.kind === 'linkcard') {
+        return h('div', { style: { textAlign: 'center', maxWidth: '520px', width: '100%' } }, [
+          h('span', { class: 'file-tile', style: { width: '46px', height: '46px', margin: '0 auto 10px' }, innerHTML: tileIcon(preview.entry) }),
+          h('div', { style: { lineHeight: '1.7' } }, `受宿主插件页安全策略限制，${preview.kindName}无法在应用内直接播放/嵌入预览。可用下方 1 小时预签名链接在浏览器中打开，或直接下载。`),
+          h('div', { class: 'form-row', style: { marginTop: '10px' } }, [
+            h('input', { readonly: true, value: preview.url, onClick: (e) => e.target.select() })
+          ]),
+          preview.officeViewer ? h('div', { class: 'form-row', style: { marginTop: '8px' } }, [
+            h('label', 'Office 在线预览地址（复制到浏览器打开）'),
+            h('input', { readonly: true, value: preview.officeViewer, onClick: (e) => e.target.select() })
+          ]) : null
+        ])
+      }
+      return h('div', { class: 'empty-hint' }, '该类型暂不支持在线预览，请下载后查看。')
+    }
+    function renderPreview() {
+      return maskWrap(closePreview, [
+        h('h2', '预览 · ' + (preview.entry ? preview.entry.key : '')),
+        h('div', { class: 'preview-body' }, [renderPreviewBody()]),
+        h('div', { class: 'foot' }, [
+          h('button', { class: ['btn', 'ghost'], onClick: () => { if (preview.entry) openPresign(preview.entry.key) } }, '预签名链接'),
+          h('button', { class: ['btn', 'ghost'], onClick: () => { if (preview.entry) addDownloadTask(preview.entry) } }, '下载'),
+          h('button', { class: 'btn', onClick: closePreview }, '关闭')
+        ])
+      ], true)
+    }
+    function renderCopy() {
+      return maskWrap(() => { copyModal.open = false }, [
+        h('h2', `${copyModal.mode === 'copy' ? '复制' : '移动'} ${copyModal.keys.length} 个文件到`),
+        h('div', { class: 'form-row' }, [
+          h('label', '目标 Bucket'),
+          h('input', { value: copyModal.bucket, onInput: (e) => { copyModal.bucket = e.target.value } })
+        ]),
+        h('div', { class: 'form-row' }, [
+          h('label', '目标前缀（目录）'),
+          h('input', { value: copyModal.prefix, placeholder: '如 backup/2026/（可空）', onInput: (e) => { copyModal.prefix = e.target.value } })
+        ]),
+        h('div', { class: 'foot' }, [
+          h('button', { class: ['btn', 'ghost'], onClick: () => { copyModal.open = false } }, '取消'),
+          h('button', { class: 'btn', onClick: doCopy }, copyModal.mode === 'move' ? '移动' : '复制')
+        ])
+      ])
+    }
+    function renderConfirm() {
+      return h('div', { class: 'mask' }, [
+        h('div', { class: 'modal', style: { width: '420px' } }, [
+          h('h2', confirmModal.title),
+          h('div', { style: { lineHeight: '1.65', whiteSpace: 'pre-wrap' } }, confirmModal.text),
+          h('div', { class: 'foot' }, [
+            h('button', { class: ['btn', 'ghost'], onClick: () => resolveConfirm(false) }, '取消'),
+            h('button', { class: ['btn', 'danger'], onClick: () => resolveConfirm(true) }, confirmModal.okText)
+          ])
+        ])
+      ])
+    }
+    function renderPrompt() {
+      return h('div', { class: 'mask' }, [
+        h('div', { class: 'modal', style: { width: '420px' } }, [
+          h('h2', promptModal.title),
+          h('div', { class: 'form-row' }, [
+            h('input', {
+              value: promptModal.value,
+              onInput: (e) => { promptModal.value = e.target.value },
+              onKeydown: (e) => { if (e.key === 'Enter') resolvePrompt(promptModal.value) }
+            })
+          ]),
+          h('div', { class: 'foot' }, [
+            h('button', { class: ['btn', 'ghost'], onClick: () => resolvePrompt(null) }, '取消'),
+            h('button', { class: 'btn', onClick: () => resolvePrompt(promptModal.value) }, promptModal.okText)
+          ])
+        ])
+      ])
+    }
+    function renderRoot() {
+      return h('div', [
+        h('div', { class: 'topbar' }, [
+          h('span', { class: 'logo', innerHTML: I.database }),
+          h('div', [
+            h('h1', '对象存储'),
+            h('div', { class: 'sub' }, 'OSS / S3 兼容服务通用浏览器 · 协议由主进程代理执行')
+          ]),
+          h('span', { class: 'spacer' }),
+          h('button', { class: ['btn', 'ghost'], onClick: toggleTheme }, uiTheme.value === 'dark' ? '切换浅色' : '切换深色'),
+          h('button', { class: ['btn', 'ghost'], onClick: scrollToTasks }, '传输任务' + (tasks.value.length ? ` (${tasks.value.length})` : ''))
+        ]),
+        connections.value.length ? renderLayout() : renderNoConn(),
+        editor.open ? renderConnEditor() : null,
+        presign.open ? renderPresign() : null,
+        preview.open ? renderPreview() : null,
+        copyModal.open ? renderCopy() : null,
+        confirmModal.open ? renderConfirm() : null,
+        promptModal.open ? renderPrompt() : null,
+        h('div', { class: ['toast', { show: !!toastText.value }] }, toastText.value)
+      ])
+    }
+
+    return renderRoot
+  }
+})
+app.mount('#app')
+</script>
+</body>
+</html>
