@@ -36,9 +36,9 @@
     {
       "id": "goshell",
       "name": "GoShell",
-      "description": "通过 GoShell 客户端连接远程终端（无需 SSH，支持 HTTP 端口访问）",
+      "description": "直连 GoShell Agent HTTP/WS 服务：终端、文件面板与管理页（无需本地客户端）",
       "author": "xyl",
-      "latestVersion": "1.0.1",
+      "latestVersion": "1.1.0",
       "tags": ["工具", "SSH"],
       "versions": [
         {
@@ -52,6 +52,18 @@
           "downloadUrl": "https://raw.githubusercontent.com/xyl912158708/newshell-plugin-registry/main/plugins/goshell/goshell-v1.0.1.zip",
           "minAppVersion": "2.1.0",
           "releaseDate": "2026-08-26"
+        },
+        {
+          "version": "1.0.2",
+          "downloadUrl": "https://raw.githubusercontent.com/xyl912158708/newshell-plugin-registry/main/plugins/goshell/goshell-v1.0.2.zip",
+          "minAppVersion": "2.5.0",
+          "releaseDate": "2026-11-09"
+        },
+        {
+          "version": "1.1.0",
+          "downloadUrl": "https://raw.githubusercontent.com/xyl912158708/newshell-plugin-registry/main/plugins/goshell/goshell-v1.1.0.zip",
+          "minAppVersion": "2.5.0",
+          "releaseDate": "2026-11-09"
         }
       ]
     }
