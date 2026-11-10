@@ -12,7 +12,10 @@ window.removeEventListener('message', handler)
 if (d.error) reject(new Error(d.error)); else resolve(d.result)
 }
 window.addEventListener('message', handler)
-parent.postMessage({ type: 'newshell:plugin-action', action, payload: Object.assign({}, payload), requestId}, '*')
+// 必须深克隆：payload 里的 Vue 响应式代理无法被 postMessage 结构化克隆，
+      // 会同步抛 DataCloneError，导致保存静默失败、数据丢失
+      const safePayload = JSON.parse(JSON.stringify(Object.assign({}, payload)))
+      parent.postMessage({ type: 'newshell:plugin-action', action, payload: safePayload, requestId }, '*')
 setTimeout(() => { window.removeEventListener('message', handler); reject(new Error('宿主响应超时'))}, 8000)
 })
 },
