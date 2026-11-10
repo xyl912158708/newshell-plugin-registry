@@ -1,0 +1,22 @@
+{
+  "author": "xyl",
+  "contributions": {
+    "toolPages": [
+      {
+        "icon": "📨",
+        "id": "studio",
+        "renderer": "index.html",
+        "title": "Kafka Studio"
+      }
+    ]
+  },
+  "description": "Kafka 巡检与运维台：浏览 Broker/Topic/分区偏移，消费组与 Lag 巡检，消息多通道过滤检索与流式消费（payload 按文本/JSON/Hex/Base64 解码，支持 RecordBatch v2 与旧消息格式），Offset 查看与重置，ACL 管理与 Schema Registry 浏览。Kafka 二进制协议由插件主进程手写客户端经本地代理（127.0.0.1:17933）会话执行。",
+  "id": "kafka-studio",
+  "main": "main.js",
+  "name": "Kafka Studio",
+  "permissions": [
+    "host_access",
+    "network"
+  ],
+  "version": "1.0.0"
+}

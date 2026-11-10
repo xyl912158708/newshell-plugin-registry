@@ -1,0 +1,22 @@
+{
+  "author": "xyl",
+  "contributions": {
+    "toolPages": [
+      {
+        "icon": "🦊",
+        "id": "console",
+        "renderer": "index.html",
+        "title": "GitLab 管理台"
+      }
+    ]
+  },
+  "description": "GitLab 管理台：在插件主页内管理多个 GitLab 连接（自托管/GitLab.com），浏览项目与代码（文件树、README、Markdown 渲染）、评审合并请求（diff 渲染、评论、批准、合并）、查看流水线与 Job 日志（重试/取消）、处理 Issue（评论、关闭/重开、新建）。全部 API 调用经插件主进程的本地无状态代理转发（127.0.0.1:17932），页面不直连 GitLab。",
+  "id": "gitlab-console",
+  "main": "main.js",
+  "name": "GitLab 管理台",
+  "permissions": [
+    "host_access",
+    "network"
+  ],
+  "version": "1.0.0"
+}

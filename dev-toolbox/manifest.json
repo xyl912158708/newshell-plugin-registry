@@ -1,0 +1,18 @@
+{
+  "author": "xyl",
+  "contributions": {
+    "toolPages": [
+      {
+        "icon": "🧰",
+        "id": "toolbox",
+        "renderer": "index.html",
+        "title": "开发者工具箱"
+      }
+    ]
+  },
+  "description": "轻量开发者工具集：即开即用、沙箱离线运行、零网络权限。涵盖加解密（MD5/SHA/HMAC/AES/随机密码）、编解码（Base64/Base32/Hex/URL/Unicode/HTML 实体/JWT）、文本处理、数据转换、格式化、时间计算（时间戳/日期差/Cron）、网络运维（子网/IP/端口速查）与图像生成（二维码/占位图/颜色工具）等 30 个高频工具，全部计算在页面内纯 JS 完成。",
+  "id": "dev-toolbox",
+  "name": "开发者工具箱",
+  "permissions": [],
+  "version": "1.0.0"
+}
