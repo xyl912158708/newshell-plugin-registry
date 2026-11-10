@@ -14,5 +14,6 @@
   "id": "dev-toolbox",
   "name": "开发者工具箱",
   "permissions": [],
-  "version": "1.0.0"
+  "dataSync": true,
+  "version": "1.0.1"
 }

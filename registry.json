@@ -106,7 +106,7 @@
       "name": "开发者工具箱",
       "description": "轻量开发者工具集，即开即用，沙箱离线运行、零网络权限。涵盖加解密（MD5/SHA/HMAC/AES）、编解码（Base64/JWT 等）、文本处理、数据转换、格式化、时间计算、网络运维与图像生成（二维码/占位图）等 30 个高频工具，全部纯 JS 在页面内计算。",
       "author": "xyl",
-      "latestVersion": "1.0.0",
+      "latestVersion": "1.0.1",
       "tags": [
         "开发工具",
         "离线",
@@ -120,6 +120,12 @@
           "downloadUrl": "https://raw.githubusercontent.com/xyl912158708/newshell-plugin-registry/main/plugins/dev-toolbox/dev-toolbox-v1.0.0.zip",
           "minAppVersion": "1.2.0",
           "releaseDate": "2026-11-10"
+        },
+        {
+          "version": "1.0.1",
+          "downloadUrl": "https://raw.githubusercontent.com/xyl912158708/newshell-plugin-registry/main/plugins/dev-toolbox/dev-toolbox-v1.0.1.zip",
+          "minAppVersion": "2.6.0",
+          "releaseDate": "2026-11-10"
         }
       ]
     },
@@ -128,7 +134,7 @@
       "name": "GitLab 管理台",
       "description": "浏览 GitLab 项目与代码、评审合并请求、查看流水线并处理 Issue。多连接在主页内管理，API 经插件主进程本地代理转发（REST API v4）。",
       "author": "xyl",
-      "latestVersion": "1.0.0",
+      "latestVersion": "1.0.1",
       "tags": [
         "GitLab",
         "代码评审",
@@ -141,6 +147,12 @@
           "downloadUrl": "https://raw.githubusercontent.com/xyl912158708/newshell-plugin-registry/main/plugins/gitlab-console/gitlab-console-v1.0.0.zip",
           "minAppVersion": "1.2.0",
           "releaseDate": "2026-11-10"
+        },
+        {
+          "version": "1.0.1",
+          "downloadUrl": "https://raw.githubusercontent.com/xyl912158708/newshell-plugin-registry/main/plugins/gitlab-console/gitlab-console-v1.0.1.zip",
+          "minAppVersion": "2.6.0",
+          "releaseDate": "2026-11-10"
         }
       ]
     },
@@ -149,7 +161,7 @@
       "name": "Kafka Studio",
       "description": "Kafka 巡检与运维：Topic/Broker 与消费组 Lag 巡检，多通道过滤检索与流式消费消息并解码 payload，管理 Offset、ACL 与 Schema Registry。Kafka 协议由插件主进程手写客户端实现。",
       "author": "xyl",
-      "latestVersion": "1.0.0",
+      "latestVersion": "1.0.1",
       "tags": [
         "Kafka",
         "消息队列",
@@ -161,6 +173,12 @@
           "version": "1.0.0",
           "downloadUrl": "https://raw.githubusercontent.com/xyl912158708/newshell-plugin-registry/main/plugins/kafka-studio/kafka-studio-v1.0.0.zip",
           "minAppVersion": "1.2.0",
+          "releaseDate": "2026-11-10"
+        },
+        {
+          "version": "1.0.1",
+          "downloadUrl": "https://raw.githubusercontent.com/xyl912158708/newshell-plugin-registry/main/plugins/kafka-studio/kafka-studio-v1.0.1.zip",
+          "minAppVersion": "2.6.0",
           "releaseDate": "2026-11-10"
         }
       ]

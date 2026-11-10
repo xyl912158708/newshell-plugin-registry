@@ -18,5 +18,6 @@
     "host_access",
     "network"
   ],
-  "version": "1.0.0"
+  "dataSync": true,
+  "version": "1.0.1"
 }
