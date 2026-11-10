@@ -224,7 +224,7 @@ function reqMetadata(conn, topics) {
   if (topics === null) w.i32(-1)
   else { w.i32(topics.length); for (const t of topics) w.str(t) }
   return conn.rawRequest(API.Metadata, 1, w.build(), (r) => {
-    r.i32() // throttle
+    // Metadata v1 响应无 throttle_time_ms（v2 起才有，且 v2 还多 cluster_id）
     const brokers = r.array(() => ({ id: r.i32(), host: r.str(), port: r.i32(), rack: r.str() }))
     const controllerId = r.i32()
     const tps = r.array(() => ({
@@ -270,7 +270,7 @@ function reqFetch(conn, topic, partition, offset, maxBytes, limit) {
 function reqFindCoordinator(conn, groupId) {
   const w = new Writer().str(groupId).i8(1)
   return conn.rawRequest(API.FindCoordinator, 1, w.build(), (r) => {
-    r.i32() // throttle
+    // FindCoordinator v1 响应无 throttle_time_ms（v2 起才有）
     const error = r.i16(); const msg = r.str(); const nodeId = r.i32(); const host = r.str(); const port = r.i32()
     return { error, msg, nodeId, host, port }
   })
@@ -291,7 +291,7 @@ function parseAssignment(buf) {
 function reqDescribeGroups(conn, groupIds) {
   const w = new Writer(); w.i32(groupIds.length); for (const g of groupIds) w.str(g)
   return conn.rawRequest(API.DescribeGroups, 1, w.build(), (r) => {
-    r.i32() // throttle
+    // DescribeGroups v1 响应无 throttle_time_ms（v2 起才有）
     return r.array(() => ({
       error: r.i16(), id: r.str(), state: r.str(), protocolType: r.str(), protocol: r.str(),
       members: r.array(() => { const m = { id: r.str(), clientId: r.str(), host: r.str() }; r.bytes(); m.assignment = parseAssignment(r.bytes()); return m })
@@ -301,7 +301,7 @@ function reqDescribeGroups(conn, groupIds) {
 function reqOffsetFetch(conn, groupId) {
   const w = new Writer().str(groupId).i32(-1) // topics = null（全部）
   return conn.rawRequest(API.OffsetFetch, 2, w.build(), (r) => {
-    r.i32() // throttle
+    // OffsetFetch v2 响应无 throttle_time_ms（v3 起才有）
     const topics = r.array(() => ({ name: r.str(), partitions: r.array(() => ({ partition: r.i32(), offset: r.i64(), metadata: r.str(), error: r.i16() })) }))
     r.i16() // top-level error (v2)
     const out = {}
