@@ -99,12 +99,11 @@ function b64DecodeText(b64) {
 const App = {
   setup() {
     const uiTheme = ref('dark')
-    const toastText = ref(''); const toastShow = ref(false)
-    let toastTimer = null
-    toastFn = (msg) => { toastText.value = msg; toastShow.value = true; clearTimeout(toastTimer); toastTimer = setTimeout(() => { toastShow.value = false }, 2800) }
+    toastFn = (msg) => { try { ElementPlus.ElMessage({ message: msg, duration: 2600, grouping: true }) } catch (_) {} }
     function resize() { nextTick(() => { const el = document.getElementById('app'); parent.postMessage({ type: 'newshell:resize', height: el ? el.scrollHeight : document.body.scrollHeight }, '*') }) }
     async function toggleTheme() {
       uiTheme.value = uiTheme.value === 'dark' ? 'light' : 'dark'
+      document.documentElement.classList.toggle('dark', uiTheme.value === 'dark')
       if (window.__osSetTheme) window.__osSetTheme(uiTheme.value)
       try { await storeBridge.set('ui-theme', uiTheme.value) } catch (_) {}
     }
@@ -170,10 +169,12 @@ const App = {
     }
 
     /* ---------- 通用弹窗 ---------- */
-    const confirmModal = reactive({ open: false, title: '', text: '', okText: '确定' })
-    let confirmResolve = null
-    function showConfirm(title, text, okText) { confirmModal.title = title; confirmModal.text = text; confirmModal.okText = okText || '确定'; confirmModal.open = true; return new Promise((r) => { confirmResolve = r }) }
-    function resolveConfirm(v) { confirmModal.open = false; if (confirmResolve) { confirmResolve(v); confirmResolve = null } }
+    async function showConfirm(title, text, okText) {
+      try {
+        await ElementPlus.ElMessageBox.confirm(text, title, { confirmButtonText: okText || '确定', cancelButtonText: '取消', type: 'warning' })
+        return true
+      } catch (_) { return false }
+    }
 
     /* ---------- 项目 ---------- */
     const tab = ref('project')
@@ -391,31 +392,42 @@ const App = {
     })
 
     /* ---------- 渲染辅助 ---------- */
-    function badge(state) { return h('span', { class: ['badge', state] }, state) }
+    /* ================= 渲染层（Element Plus） ================= */
+    const { ElButton, ElButtonGroup, ElInput, ElSelect, ElOption, ElDialog, ElForm, ElFormItem, ElSwitch, ElTabs, ElTabPane, ElTag, ElTable, ElTableColumn, ElSegmented, ElScrollbar, ElEmpty, ElCheckbox, ElTooltip } = ElementPlus
+    const I = window.EP_ICONS || {}
+    const loadingDir = Vue.resolveDirective ? Vue.resolveDirective('loading') : null
+    function WL(vnode, on) { return loadingDir ? Vue.withDirectives(vnode, [[loadingDir, !!on]]) : vnode }
+    function stateTag(state) {
+      const map = { opened: ['success', '开启'], open: ['success', '开启'], merged: ['primary', '已合并'], closed: ['danger', '已关闭'], success: ['success', '成功'], failed: ['danger', '失败'], running: ['warning', '运行中'], pending: ['info', '等待'], canceled: ['info', '已取消'], cancelled: ['info', '已取消'], skipped: ['info', '跳过'], manual: ['info', '手动'], created: ['info', '已创建'], scheduled: ['info', '定时'] }
+      const m = map[state] || ['info', state || '-']
+      return h(ElTag, { type: m[0], size: 'small', effect: 'light', round: true }, () => m[1])
+    }
     function notesList(notes) {
-      if (!notes.length) return h('div', { style: { color: 'var(--text-secondary)', fontSize: '12.5px', padding: '6px 0' } }, '暂无评论')
-      return h('div', notes.map((n) => h('div', { class: 'note-item' }, [
-        h('span', { class: 'who' }, n.author ? n.author.name : '未知'),
-        h('span', { class: 'when' }, fmtTime(n.created_at)),
-        h('div', { class: 'md-body', style: { marginTop: '4px' }, innerHTML: renderMarkdown(n.body || '') })
+      if (!notes.length) return h('div', { class: 'empty-line' }, '暂无评论')
+      return h('div', { class: 'notes' }, notes.map((n) => h('div', { class: 'note-item' }, [
+        h('div', { class: 'note-head' }, [h('span', { class: 'who' }, n.author ? n.author.name : '未知'), h('span', { class: 'when' }, fmtTime(n.created_at))]),
+        h('div', { class: 'md-body', innerHTML: renderMarkdown(n.body || '') })
       ])))
     }
     function commentBox(value, onInput, onSend) {
-      return h('div', { style: { marginTop: '12px' } }, [
-        h('textarea', { value, placeholder: '写下评论（支持 Markdown）…', rows: 3, style: { width: '100%' }, onInput: (e) => onInput(e.target.value) }),
-        h('div', { style: { textAlign: 'right', marginTop: '6px' } }, [h('button', { class: 'btn', onClick: onSend }, '发表评论')])
+      return h('div', { class: 'comment-box' }, [
+        h(ElInput, { modelValue: value, 'onUpdate:modelValue': onInput, type: 'textarea', rows: 3, placeholder: '写下评论（支持 Markdown）…' }),
+        h('div', { class: 'comment-actions' }, [h(ElButton, { type: 'primary', size: 'small', onClick: onSend }, () => '发表评论')])
       ])
     }
     function loadMoreBtn(loading, page, totalPages, onClick) {
       if (page >= totalPages) return null
-      return h('div', { style: { textAlign: 'center', padding: '10px' } }, [h('button', { class: ['btn', 'ghost', 'small'], disabled: loading, onClick }, loading ? '加载中…' : '加载更多')])
+      return h('div', { class: 'load-more' }, [h(ElButton, { text: true, loading, onClick }, () => '加载更多')])
+    }
+    function emptyPane(big, sub) {
+      return h(ElEmpty, { description: big + (sub ? ' · ' + sub : ''), imageSize: 72, class: 'pane-empty' })
     }
 
-    /* ---------- 渲染：项目页 ---------- */
+    /* ---------- 项目页 ---------- */
     function renderProjectTab() {
-      if (!curProject.value) return h('div', { class: 'list-empty' }, [h('div', { class: 'big' }, '从上方选择一个项目'), h('div', '项目文件浏览、合并请求、流水线与 Issue 都按项目组织')])
+      if (!curProject.value) return emptyPane('从上方选择一个项目', '文件、合并请求、流水线与 Issue 都按项目组织')
       const p = curProject.value
-      const crumbs = [h('span', { class: 'crumb', onClick: () => { fileView.open = false; loadTree('') } }, p.default_branch ? tree.ref : '')]
+      const crumbs = [h('span', { class: 'crumb', onClick: () => { fileView.open = false; loadTree('') } }, tree.ref || '根目录')]
       const parts = tree.path ? tree.path.split('/') : []
       parts.forEach((part, i) => {
         crumbs.push(h('span', { class: 'crumb-sep' }, '/'))
@@ -424,243 +436,269 @@ const App = {
       let body
       if (fileView.open) {
         body = h('div', [
-          h('div', { style: { display: 'flex', gap: '8px', alignItems: 'center', marginBottom: '8px' } }, [
-            h('button', { class: ['btn', 'ghost', 'small'], onClick: () => { fileView.open = false; resize() } }, '← 返回目录'),
-            h('span', { class: 'mono', style: { fontSize: '12.5px' } }, fileView.path)
+          h('div', { class: 'file-head' }, [
+            h(ElButton, { text: true, size: 'small', icon: I.ArrowLeft, onClick: () => { fileView.open = false } }, () => '返回目录'),
+            h('span', { class: 'mono file-path' }, fileView.path)
           ]),
-          fileView.loading ? h('div', '加载中…') : fileView.isMd
-            ? h('div', { class: 'md-body', innerHTML: renderMarkdown(fileView.content) })
-            : h('div', { class: 'code-view' }, fileView.content)
+          fileView.loading ? h('div', { class: 'empty-line' }, '加载中…') : fileView.isMd
+            ? h('div', { class: 'md-body md-panel', innerHTML: renderMarkdown(fileView.content) })
+            : h('pre', { class: 'code-view' }, fileView.content)
         ])
       } else {
         const sorted = [...tree.items].sort((a, b) => (a.type === b.type ? a.name.localeCompare(b.name) : a.type === 'tree' ? -1 : 1))
         body = h('div', [
-          tree.loading ? h('div', { style: { padding: '10px', color: 'var(--text-secondary)' } }, '加载中…') :
-          sorted.length ? h('div', sorted.map((it) => h('div', { class: 'file-tree-item', onClick: () => { if (it.type === 'tree') loadTree((tree.path ? tree.path + '/' : '') + it.name); else openFile(it) } }, [
-            h('span', it.type === 'tree' ? '📁' : '📄'), h('span', it.name), it.type === 'blob' ? null : h('span', { style: { color: 'var(--text-secondary)', fontSize: '11px' } }, '')
-          ]))) : h('div', { style: { padding: '12px', color: 'var(--text-secondary)' } }, '此目录为空'),
-          !tree.path && readme.html ? h('div', { style: { marginTop: '14px' } }, [h('div', { class: 'io-label' }, 'README'), h('div', { class: 'md-body', innerHTML: readme.html })]) : null
+          tree.loading ? h('div', { class: 'empty-line' }, '加载中…') :
+          sorted.length ? h('div', { class: 'file-list' }, sorted.map((it) => h('div', { class: 'file-row', onClick: () => { if (it.type === 'tree') loadTree((tree.path ? tree.path + '/' : '') + it.name); else openFile(it) } }, [
+            h(it.type === 'tree' ? I.Folder : I.Document, { size: 15, class: it.type === 'tree' ? 'file-ico dir' : 'file-ico' }),
+            h('span', { class: 'file-name' }, it.name)
+          ]))) : h('div', { class: 'empty-line' }, '此目录为空'),
+          !tree.path && readme.html ? h('div', { class: 'readme-block' }, [h('div', { class: 'block-label' }, 'README'), h('div', { class: 'md-body md-panel', innerHTML: readme.html })]) : null
         ])
       }
       return h('div', [
-        h('div', { style: { display: 'flex', gap: '10px', alignItems: 'center', flexWrap: 'wrap', marginBottom: '6px' } }, [
-          h('span', { style: { fontWeight: 650, fontSize: '14px' } }, p.name_with_namespace || p.name),
-          p.visibility ? h('span', { class: 'label-chip' }, p.visibility) : null,
-          h('span', { style: { flex: 1 } }),
-          h('span', { style: { fontSize: '12px', color: 'var(--text-secondary)' } }, '分支'),
-          h('select', { value: tree.ref, style: { height: '30px', fontSize: '12.5px', width: 'auto', marginBottom: 0 }, onChange: (e) => { tree.ref = e.target.value; fileView.open = false; loadTree(tree.path); loadReadme() } }, branches.value.map((b) => h('option', { value: b }, b)))
+        h('div', { class: 'proj-head' }, [
+          h('span', { class: 'proj-name' }, p.path_with_namespace || p.name),
+          p.visibility ? h(ElTag, { size: 'small', effect: 'plain', round: true }, () => p.visibility) : null,
+          h('span', { class: 'flex-spacer' }),
+          h('span', { class: 'field-label' }, '分支'),
+          h(ElSelect, { modelValue: tree.ref, 'onUpdate:modelValue': (v) => { tree.ref = v; fileView.open = false; loadTree(tree.path); loadReadme() }, size: 'small', style: { width: '170px' } }, () =>
+            branches.value.map((b) => h(ElOption, { label: b, value: b })))
         ]),
-        p.description ? h('div', { style: { color: 'var(--text-secondary)', fontSize: '12.5px', marginBottom: '8px' } }, p.description) : null,
+        p.description ? h('div', { class: 'proj-desc' }, p.description) : null,
         h('div', { class: 'crumbs' }, crumbs),
         body
       ])
     }
 
-    /* ---------- 渲染：MR ---------- */
+    /* ---------- MR ---------- */
     function renderMrTab() {
-      if (!curProject.value) return h('div', { class: 'list-empty' }, [h('div', { class: 'big' }, '从上方选择一个项目')])
+      if (!curProject.value) return emptyPane('从上方选择一个项目')
       if (mr.detail) {
         const d = mr.detail
         return h('div', [
-          h('div', { style: { display: 'flex', gap: '8px', alignItems: 'center', marginBottom: '8px', flexWrap: 'wrap' } }, [
-            h('button', { class: ['btn', 'ghost', 'small'], onClick: () => { mr.detail = null; resize() } }, '← 返回列表'),
-            h('span', { style: { fontWeight: 650, minWidth: 0 } }, '!' + d.iid + ' ' + d.title),
-            badge(d.state),
-            h('span', { style: { flex: 1 } }),
-            d.state === 'opened' ? h('button', { class: ['btn', 'ghost', 'small'], onClick: mrApprove }, '批准') : null,
-            d.state === 'opened' ? h('label', { style: { fontSize: '12px', display: 'inline-flex', gap: '4px', alignItems: 'center', whiteSpace: 'nowrap' } }, [h('input', { type: 'checkbox', checked: mrRemoveSource.value, style: { width: 'auto', margin: 0 }, onChange: (e) => { mrRemoveSource.value = e.target.checked } }), '合并后删源分支']) : null,
-            d.state === 'opened' ? h('button', { class: ['btn', 'small'], onClick: mrMerge }, '合并') : null
+          h('div', { class: 'detail-head' }, [
+            h(ElButton, { text: true, size: 'small', icon: I.ArrowLeft, onClick: () => { mr.detail = null } }, () => '返回列表'),
+            h('span', { class: 'detail-title' }, '!' + d.iid + ' ' + d.title),
+            stateTag(d.state),
+            h('span', { class: 'flex-spacer' }),
+            d.state === 'opened' ? h(ElButton, { size: 'small', loading: mr.busy, onClick: mrApprove }, () => '批准') : null,
+            d.state === 'opened' ? h(ElCheckbox, { modelValue: mrRemoveSource.value, 'onUpdate:modelValue': (v) => (mrRemoveSource.value = v), label: '合并后删源分支' }) : null,
+            d.state === 'opened' ? h(ElButton, { type: 'primary', size: 'small', loading: mr.busy, onClick: mrMerge }, () => '合并') : null
           ]),
-          h('div', { style: { color: 'var(--text-secondary)', fontSize: '12px', marginBottom: '8px' } }, (d.author ? d.author.name : '') + ' · ' + d.source_branch + ' → ' + d.target_branch + ' · 更新于 ' + relTime(d.updated_at)),
-          d.description ? h('div', { class: 'md-body', style: { marginBottom: '12px' }, innerHTML: renderMarkdown(d.description) }) : null,
-          h('div', { class: 'io-label' }, '变更（' + mr.changes.length + ' 个文件）'),
-          ...mr.changes.map((c) => h('div', { style: { marginBottom: '10px' } }, [
-            h('div', { class: 'mono', style: { fontSize: '12px', marginBottom: '4px' } }, (c.new_file ? '新增 ' : c.deleted_file ? '删除 ' : '') + c.new_path),
-            c.diff ? h('div', { class: 'diff-box' }, c.diff.split('\n').map((line) => h('div', { class: ['dl', line.startsWith('+') && !line.startsWith('+++') ? 'add' : line.startsWith('-') && !line.startsWith('---') ? 'del' : line.startsWith('@@') ? 'hunk' : ''] }, line || ' '))) : h('div', { style: { color: 'var(--text-secondary)', fontSize: '12px' } }, '（二进制或无文本差异）')
-          ])),
-          h('div', { class: 'io-label' }, '评论'),
+          h('div', { class: 'meta-line' }, [h('span', (d.author ? d.author.name : '未知') + ' 创建于 ' + fmtTime(d.created_at)), h('span', { class: 'mono' }, d.source_branch + ' → ' + d.target_branch)]),
+          d.description ? h('div', { class: 'md-body md-panel', innerHTML: renderMarkdown(d.description) }) : null,
+          h('div', { class: 'block-label' }, '变更（' + mr.changes.length + ' 个文件）'),
+          mr.changes.length ? h('div', { class: 'diff-list' }, mr.changes.map((c) => h('div', { class: 'diff-box' }, [
+            h('div', { class: 'diff-file mono' }, (c.new_file ? '+ ' : c.deleted_file ? '− ' : '') + c.new_path),
+            h('pre', { class: 'diff-pre' }, (c.diff || '').split('\n').map((line) => {
+              const cls = line.startsWith('+') && !line.startsWith('+++') ? 'add' : line.startsWith('-') && !line.startsWith('---') ? 'del' : line.startsWith('@@') ? 'hunk' : ''
+              return h('div', { class: ['dl', cls] }, line || ' ')
+            }))
+          ]))) : h('div', { class: 'empty-line' }, '无变更内容'),
+          h('div', { class: 'block-label' }, '评论'),
           notesList(mr.notes),
-          commentBox(mr.comment, (v) => { mr.comment = v }, mrComment)
+          commentBox(mr.comment, (v) => (mr.comment = v), mrComment)
         ])
       }
       return h('div', [
-        h('div', { class: 'gl-tabs' }, [['opened', '开启中'], ['merged', '已合并'], ['closed', '已关闭'], ['all', '全部']].map(([v, t]) => h('button', { class: ['gl-tab', { active: mr.state === v }], onClick: () => { mr.state = v; loadMrs(true) } }, t))),
-        mr.loading && !mr.list.length ? h('div', '加载中…') : mr.list.length ? h('div', { class: 'gl-list' }, mr.list.map((m) => h('div', { class: 'gl-item', onClick: () => openMr(m) }, [
-          h('span', { class: 'title' }, '!' + m.iid + ' ' + m.title),
-          m.labels && m.labels.length ? h('span', { style: { display: 'flex', gap: '4px' } }, m.labels.slice(0, 3).map((l) => h('span', { class: 'label-chip' }, typeof l === 'string' ? l : l.name))) : null,
-          badge(m.state),
-          h('span', { class: 'sub' }, (m.author ? m.author.name : '') + ' · ' + relTime(m.updated_at))
-        ]))) : h('div', { class: 'list-empty' }, '暂无合并请求'),
+        h('div', { class: 'tab-toolbar' }, [
+          h(ElSegmented, { modelValue: mr.state, 'onUpdate:modelValue': (v) => { mr.state = v; mr.detail = null; loadMrs(true) }, options: [{ label: '开启', value: 'opened' }, { label: '已合并', value: 'merged' }, { label: '已关闭', value: 'closed' }, { label: '全部', value: 'all' }], size: 'small' }),
+          h('span', { class: 'flex-spacer' }),
+          h(ElButton, { size: 'small', icon: I.Refresh, loading: mr.loading, onClick: () => loadMrs(true) }, () => '刷新')
+        ]),
+        WL(h('div', mr.list.length ? h('div', { class: 'row-list' }, mr.list.map((m) => h('div', { class: 'row-item', onClick: () => openMr(m) }, [
+          h('div', { class: 'row-main' }, [
+            h('div', { class: 'row-title' }, [h('span', { class: 'mono muted' }, '!' + m.iid), h('span', m.title)]),
+            h('div', { class: 'row-sub' }, (m.author ? m.author.name : '') + ' · ' + relTime(m.updated_at) + ' 更新 · ' + m.source_branch + ' → ' + m.target_branch)
+          ]),
+          stateTag(m.state)
+        ]))) : h('div', { class: 'empty-line' }, mr.loading ? '加载中…' : '暂无合并请求')), mr.loading),
         loadMoreBtn(mr.loading, mr.page, mr.totalPages, () => { mr.page++; loadMrs(false) })
       ])
     }
 
-    /* ---------- 渲染：流水线 ---------- */
+    /* ---------- 流水线 ---------- */
+    function jobStatusBtn(job) {
+      const btns = [h(ElButton, { size: 'small', text: true, onClick: () => openTrace(job) }, () => '日志')]
+      if (job.status === 'failed' || job.status === 'canceled' || job.status === 'success') btns.push(h(ElButton, { size: 'small', text: true, onClick: () => jobAction(job, 'retry') }, () => '重试'))
+      if (job.status === 'manual') btns.push(h(ElButton, { size: 'small', text: true, type: 'primary', onClick: () => jobAction(job, 'play') }, () => '运行'))
+      if (job.status === 'running' || job.status === 'pending') btns.push(h(ElButton, { size: 'small', text: true, type: 'danger', onClick: () => jobAction(job, 'cancel') }, () => '取消'))
+      return h('span', { class: 'btn-row' }, btns)
+    }
     function renderPipeTab() {
-      if (!curProject.value) return h('div', { class: 'list-empty' }, [h('div', { class: 'big' }, '从上方选择一个项目')])
+      if (!curProject.value) return emptyPane('从上方选择一个项目')
       if (pipe.detail) {
         const d = pipe.detail
-        const stages = []
-        const seenStages = []
-        for (const j of pipe.jobs) if (!seenStages.includes(j.stage)) seenStages.push(j.stage)
-        for (const stg of seenStages) stages.push({ name: stg, jobs: pipe.jobs.filter((j) => j.stage === stg) })
         return h('div', [
-          h('div', { style: { display: 'flex', gap: '8px', alignItems: 'center', marginBottom: '10px' } }, [
-            h('button', { class: ['btn', 'ghost', 'small'], onClick: () => { pipe.detail = null; resize() } }, '← 返回列表'),
-            h('span', { style: { fontWeight: 650 } }, '流水线 #' + d.id),
-            badge(d.status),
-            h('span', { class: 'sub', style: { color: 'var(--text-secondary)', fontSize: '12px' } }, d.ref + ' · ' + (d.sha || '').slice(0, 8) + ' · ' + relTime(d.updated_at)),
-            h('span', { style: { flex: 1 } }),
-            ['running', 'pending', 'created'].includes(d.status) ? h('button', { class: ['btn', 'ghost', 'small'], onClick: () => pipeAction('cancel') }, '取消流水线') : null,
-            ['failed', 'canceled', 'success'].includes(d.status) ? h('button', { class: ['btn', 'small'], onClick: () => pipeAction('retry') }, '重试流水线') : null
+          h('div', { class: 'detail-head' }, [
+            h(ElButton, { text: true, size: 'small', icon: I.ArrowLeft, onClick: () => { pipe.detail = null; pipe.jobs = [] } }, () => '返回列表'),
+            h('span', { class: 'detail-title' }, '流水线 #' + d.id),
+            stateTag(d.status),
+            h('span', { class: 'flex-spacer' }),
+            (d.status === 'running' || d.status === 'pending') ? h(ElButton, { size: 'small', type: 'danger', plain: true, onClick: () => pipeAction('cancel') }, () => '取消流水线') : null,
+            (d.status === 'failed' || d.status === 'canceled' || d.status === 'success') ? h(ElButton, { size: 'small', onClick: () => pipeAction('retry') }, () => '重试流水线') : null
           ]),
-          ...stages.map((stg) => h('div', { style: { marginBottom: '10px' } }, [
-            h('div', { class: 'io-label' }, stg.name),
-            h('div', { class: 'gl-list' }, stg.jobs.map((j) => h('div', { class: 'gl-item' }, [
-              h('span', { class: 'title' }, j.name),
-              badge(j.status),
-              h('span', { class: 'sub' }, j.duration ? Math.round(j.duration) + ' 秒' : ''),
-              j.status === 'manual' ? h('button', { class: ['btn', 'ghost', 'small'], onClick: () => jobAction(j, 'play') }, '触发') : null,
-              ['failed', 'canceled', 'success'].includes(j.status) ? h('button', { class: ['btn', 'ghost', 'small'], onClick: () => jobAction(j, 'retry') }, '重跑') : null,
-              ['running', 'pending'].includes(j.status) ? h('button', { class: ['btn', 'ghost', 'small'], onClick: () => jobAction(j, 'cancel') }, '取消') : null,
-              h('button', { class: ['btn', 'ghost', 'small'], onClick: () => openTrace(j) }, '日志')
-            ])))
-          ])),
-          pipe.traceJob ? h('div', [
-            h('div', { class: 'io-label' }, [h('span', 'Job 日志 · ' + pipe.traceJob.name), h('label', { style: { fontSize: '11.5px', fontWeight: 400, display: 'inline-flex', gap: '4px', alignItems: 'center' } }, [h('input', { type: 'checkbox', checked: pipe.traceAuto, style: { width: 'auto', margin: 0 }, onChange: (e) => { pipe.traceAuto = e.target.checked } }), '自动滚到底部']) ]),
-            h('div', { class: 'trace-view' }, pipe.trace)
-          ]) : null
+          h('div', { class: 'meta-line' }, [h('span', { class: 'mono' }, d.ref), h('span', { class: 'mono' }, (d.sha || '').slice(0, 8)), h('span', fmtTime(d.created_at))]),
+          h(ElTable, { data: pipe.jobs, size: 'small', style: { width: '100%' } }, () => [
+            h(ElTableColumn, { prop: 'name', label: 'Job', minWidth: 140 }),
+            h(ElTableColumn, { prop: 'stage', label: '阶段', width: 110 }),
+            h(ElTableColumn, { label: '状态', width: 100 }, { default: ({ row }) => stateTag(row.status) }),
+            h(ElTableColumn, { label: '耗时', width: 90 }, { default: ({ row }) => row.duration ? Math.round(row.duration) + 's' : '-' }),
+            h(ElTableColumn, { label: '操作', width: 170 }, { default: ({ row }) => jobStatusBtn(row) })
+          ])
         ])
       }
       return h('div', [
-        pipe.loading && !pipe.list.length ? h('div', '加载中…') : pipe.list.length ? h('div', { class: 'gl-list' }, pipe.list.map((p) => h('div', { class: 'gl-item', onClick: () => openPipe(p) }, [
-          h('span', { class: 'title' }, '#' + p.id + ' · ' + p.ref),
-          badge(p.status),
-          h('span', { class: 'sub' }, (p.sha || '').slice(0, 8) + ' · ' + relTime(p.updated_at))
-        ]))) : h('div', { class: 'list-empty' }, '暂无流水线'),
+        h('div', { class: 'tab-toolbar' }, [
+          h('span', { class: 'toolbar-hint' }, '最近的流水线运行'),
+          h('span', { class: 'flex-spacer' }),
+          h(ElButton, { size: 'small', icon: I.Refresh, loading: pipe.loading, onClick: () => loadPipes(true) }, () => '刷新')
+        ]),
+        h(ElTable, { data: pipe.list, size: 'small', style: { width: '100%' }, onRowClick: (row) => openPipe(row), rowStyle: { cursor: 'pointer' } }, () => [
+          h(ElTableColumn, { label: 'ID', width: 90 }, { default: ({ row }) => '#' + row.id }),
+          h(ElTableColumn, { prop: 'ref', label: '分支', minWidth: 130 }),
+          h(ElTableColumn, { label: '状态', width: 100 }, { default: ({ row }) => stateTag(row.status) }),
+          h(ElTableColumn, { label: '提交', width: 110 }, { default: ({ row }) => h('span', { class: 'mono' }, (row.sha || '').slice(0, 8)) }),
+          h(ElTableColumn, { label: '创建时间', minWidth: 150 }, { default: ({ row }) => fmtTime(row.created_at) })
+        ]),
+        !pipe.list.length && !pipe.loading ? h('div', { class: 'empty-line' }, '暂无流水线') : null,
         loadMoreBtn(pipe.loading, pipe.page, pipe.totalPages, () => { pipe.page++; loadPipes(false) })
       ])
     }
 
-    /* ---------- 渲染：Issue ---------- */
+    /* ---------- Issue ---------- */
     function renderIssueTab() {
-      if (!curProject.value) return h('div', { class: 'list-empty' }, [h('div', { class: 'big' }, '从上方选择一个项目')])
+      if (!curProject.value) return emptyPane('从上方选择一个项目')
       if (issue.detail) {
         const d = issue.detail
         return h('div', [
-          h('div', { style: { display: 'flex', gap: '8px', alignItems: 'center', marginBottom: '8px' } }, [
-            h('button', { class: ['btn', 'ghost', 'small'], onClick: () => { issue.detail = null; resize() } }, '← 返回列表'),
-            h('span', { style: { fontWeight: 650 } }, '#' + d.iid + ' ' + d.title),
-            badge(d.state),
-            h('span', { style: { flex: 1 } }),
-            h('button', { class: ['btn', 'ghost', 'small'], onClick: issueToggleState }, d.state === 'opened' ? '关闭 Issue' : '重新打开')
+          h('div', { class: 'detail-head' }, [
+            h(ElButton, { text: true, size: 'small', icon: I.ArrowLeft, onClick: () => { issue.detail = null } }, () => '返回列表'),
+            h('span', { class: 'detail-title' }, '#' + d.iid + ' ' + d.title),
+            stateTag(d.state),
+            h('span', { class: 'flex-spacer' }),
+            h(ElButton, { size: 'small', type: d.state === 'opened' ? 'danger' : 'primary', plain: true, onClick: issueToggleState }, () => (d.state === 'opened' ? '关闭 Issue' : '重新打开'))
           ]),
-          h('div', { style: { color: 'var(--text-secondary)', fontSize: '12px', marginBottom: '8px' } }, (d.author ? d.author.name : '') + ' 创建于 ' + fmtTime(d.created_at)),
-          d.labels && d.labels.length ? h('div', { style: { display: 'flex', gap: '4px', marginBottom: '8px' } }, d.labels.map((l) => h('span', { class: 'label-chip' }, typeof l === 'string' ? l : l.name))) : null,
-          d.description ? h('div', { class: 'md-body', style: { marginBottom: '12px' }, innerHTML: renderMarkdown(d.description) }) : null,
-          h('div', { class: 'io-label' }, '评论'),
+          h('div', { class: 'meta-line' }, [h('span', (d.author ? d.author.name : '未知') + ' 创建于 ' + fmtTime(d.created_at)), (d.labels && d.labels.length) ? h('span', d.labels.map((l) => h(ElTag, { size: 'small', effect: 'plain', round: true, style: { marginRight: '4px' } }, () => l))) : null]),
+          d.description ? h('div', { class: 'md-body md-panel', innerHTML: renderMarkdown(d.description) }) : null,
+          h('div', { class: 'block-label' }, '评论'),
           notesList(issue.notes),
-          commentBox(issue.comment, (v) => { issue.comment = v }, issueComment)
+          commentBox(issue.comment, (v) => (issue.comment = v), issueComment)
         ])
       }
       return h('div', [
-        h('div', { style: { display: 'flex', alignItems: 'center', marginBottom: '10px' } }, [
-          h('div', { class: 'gl-tabs', style: { marginBottom: 0 } }, [['opened', '开启中'], ['closed', '已关闭'], ['all', '全部']].map(([v, t]) => h('button', { class: ['gl-tab', { active: issue.state === v }], onClick: () => { issue.state = v; loadIssues(true) } }, t))),
-          h('span', { style: { flex: 1 } }),
-          h('button', { class: ['btn', 'small'], onClick: () => { issue.createOpen = true } }, '新建 Issue')
+        h('div', { class: 'tab-toolbar' }, [
+          h(ElSegmented, { modelValue: issue.state, 'onUpdate:modelValue': (v) => { issue.state = v; issue.detail = null; loadIssues(true) }, options: [{ label: '开启', value: 'opened' }, { label: '已关闭', value: 'closed' }, { label: '全部', value: 'all' }], size: 'small' }),
+          h('span', { class: 'flex-spacer' }),
+          h(ElButton, { size: 'small', icon: I.Refresh, loading: issue.loading, onClick: () => loadIssues(true) }, () => '刷新'),
+          h(ElButton, { type: 'primary', size: 'small', icon: I.Plus, onClick: () => { issue.createOpen = true } }, () => '新建 Issue')
         ]),
-        issue.loading && !issue.list.length ? h('div', '加载中…') : issue.list.length ? h('div', { class: 'gl-list' }, issue.list.map((it) => h('div', { class: 'gl-item', onClick: () => openIssue(it) }, [
-          h('span', { class: 'title' }, '#' + it.iid + ' ' + it.title),
-          it.labels && it.labels.length ? h('span', { style: { display: 'flex', gap: '4px' } }, it.labels.slice(0, 3).map((l) => h('span', { class: 'label-chip' }, typeof l === 'string' ? l : l.name))) : null,
-          badge(it.state),
-          h('span', { class: 'sub' }, (it.author ? it.author.name : '') + ' · ' + relTime(it.updated_at))
-        ]))) : h('div', { class: 'list-empty' }, '暂无 Issue'),
+        WL(h('div', issue.list.length ? h('div', { class: 'row-list' }, issue.list.map((it) => h('div', { class: 'row-item', onClick: () => openIssue(it) }, [
+          h('div', { class: 'row-main' }, [
+            h('div', { class: 'row-title' }, [h('span', { class: 'mono muted' }, '#' + it.iid), h('span', it.title)]),
+            h('div', { class: 'row-sub' }, (it.author ? it.author.name : '') + ' · ' + relTime(it.updated_at) + ' 更新' + ((it.labels && it.labels.length) ? ' · ' + it.labels.join(', ') : ''))
+          ]),
+          stateTag(it.state)
+        ]))) : h('div', { class: 'empty-line' }, issue.loading ? '加载中…' : '暂无 Issue')), issue.loading),
         loadMoreBtn(issue.loading, issue.page, issue.totalPages, () => { issue.page++; loadIssues(false) })
       ])
     }
 
-    /* ---------- 渲染：弹窗 ---------- */
-    function maskWrap(children, onMask) {
-      return h('div', { class: 'mask', onClick: (e) => { if (e.target === e.currentTarget && onMask) onMask() } }, children)
-    }
-    function renderConfirm() {
-      return maskWrap([h('div', { class: 'modal', style: { width: '420px' } }, [
-        h('h2', confirmModal.title),
-        h('div', { style: { lineHeight: '1.65', whiteSpace: 'pre-wrap' } }, confirmModal.text),
-        h('div', { class: 'foot' }, [
-          h('button', { class: ['btn', 'ghost'], onClick: () => resolveConfirm(false) }, '取消'),
-          h('button', { class: ['btn', 'danger'], onClick: () => resolveConfirm(true) }, confirmModal.okText)
-        ])
-      ])], () => resolveConfirm(false))
-    }
+    /* ---------- 弹窗 ---------- */
     function renderEditor() {
-      return maskWrap([h('div', { class: 'modal', style: { width: '480px' } }, [
-        h('h2', editor.id ? '编辑连接' : '新建连接'),
-        h('div', { class: 'form-row' }, [h('label', '名称'), h('input', { value: editor.name, placeholder: '公司 GitLab', onInput: (e) => { editor.name = e.target.value } })]),
-        h('div', { class: 'form-row' }, [h('label', 'GitLab 地址'), h('input', { value: editor.baseUrl, placeholder: 'https://gitlab.example.com', onInput: (e) => { editor.baseUrl = e.target.value } })]),
-        h('div', { class: 'form-row' }, [h('label', 'Access Token（需 api 权限）'), h('input', { value: editor.token, type: 'password', placeholder: 'glpat-…', onInput: (e) => { editor.token = e.target.value } })]),
-        h('div', { class: 'form-row' }, [h('label', [h('input', { type: 'checkbox', checked: editor.allowInsecure, style: { width: 'auto', marginRight: '6px' }, onChange: (e) => { editor.allowInsecure = e.target.checked } }), '允许自签证书（跳过 TLS 校验）'])]),
-        editor.testMsg ? h('div', { class: editor.testOk ? 'ok-text' : 'err-text' }, editor.testMsg) : null,
-        h('div', { class: 'foot' }, [
-          editor.id ? h('button', { class: ['btn', 'danger'], style: { marginRight: 'auto' }, onClick: deleteEditor }, '删除连接') : null,
-          h('button', { class: ['btn', 'ghost'], disabled: editor.testing, onClick: testEditor }, editor.testing ? '测试中…' : '测试连接'),
-          h('button', { class: ['btn', 'ghost'], onClick: () => { editor.open = false } }, '取消'),
-          h('button', { class: 'btn', onClick: saveEditor }, '保存')
+      return h(ElDialog, { modelValue: editor.open, 'onUpdate:modelValue': (v) => (editor.open = v), title: editor.id ? '编辑连接' : '新建连接', width: '480px', closeOnClickModal: false }, {
+        default: () => h(ElForm, { labelWidth: '84px' }, () => [
+          h(ElFormItem, { label: '名称', required: true }, () => h(ElInput, { modelValue: editor.name, 'onUpdate:modelValue': (v) => (editor.name = v), placeholder: '公司 GitLab' })),
+          h(ElFormItem, { label: '地址', required: true }, () => h(ElInput, { modelValue: editor.baseUrl, 'onUpdate:modelValue': (v) => (editor.baseUrl = v), placeholder: 'https://gitlab.example.com' })),
+          h(ElFormItem, { label: 'Token', required: true }, () => h(ElInput, { modelValue: editor.token, 'onUpdate:modelValue': (v) => (editor.token = v), type: 'password', showPassword: true, placeholder: 'glpat-…（需 api 权限）' })),
+          h(ElFormItem, { label: '自签证书' }, () => h('span', { class: 'switch-line' }, [h(ElSwitch, { modelValue: editor.allowInsecure, 'onUpdate:modelValue': (v) => (editor.allowInsecure = v) }), h('span', { class: 'hint' }, '内网自签 HTTPS 时开启')])),
+          h(ElFormItem, { label: ' ' }, () => h('span', { class: 'test-line' }, [
+            h(ElButton, { size: 'small', loading: editor.testing, onClick: testEditor }, () => '测试连接'),
+            editor.testMsg ? h('span', { class: editor.testOk ? 'ok-text' : 'err-text' }, editor.testMsg) : null
+          ]))
+        ]),
+        footer: () => h('div', { class: 'dialog-foot' }, [
+          editor.id ? h(ElButton, { type: 'danger', plain: true, onClick: deleteEditor }, () => '删除') : null,
+          h('span', { class: 'flex-spacer' }),
+          h(ElButton, { onClick: () => (editor.open = false) }, () => '取消'),
+          h(ElButton, { type: 'primary', onClick: saveEditor }, () => '保存')
         ])
-      ])])
+      })
     }
     function renderIssueCreate() {
-      return maskWrap([h('div', { class: 'modal', style: { width: '520px' } }, [
-        h('h2', '新建 Issue'),
-        h('div', { class: 'form-row' }, [h('label', '标题'), h('input', { value: issue.createTitle, onInput: (e) => { issue.createTitle = e.target.value } })]),
-        h('div', { class: 'form-row' }, [h('label', '描述（Markdown）'), h('textarea', { value: issue.createDesc, rows: 5, onInput: (e) => { issue.createDesc = e.target.value } })]),
-        h('div', { class: 'form-row' }, [h('label', '标签（逗号分隔）'), h('input', { value: issue.createLabels, placeholder: 'bug, 高优先级', onInput: (e) => { issue.createLabels = e.target.value } })]),
-        h('div', { class: 'foot' }, [
-          h('button', { class: ['btn', 'ghost'], onClick: () => { issue.createOpen = false } }, '取消'),
-          h('button', { class: 'btn', onClick: issueCreate }, '创建')
+      return h(ElDialog, { modelValue: issue.createOpen, 'onUpdate:modelValue': (v) => (issue.createOpen = v), title: '新建 Issue', width: '520px', closeOnClickModal: false }, {
+        default: () => h(ElForm, { labelWidth: '64px' }, () => [
+          h(ElFormItem, { label: '标题', required: true }, () => h(ElInput, { modelValue: issue.createTitle, 'onUpdate:modelValue': (v) => (issue.createTitle = v), placeholder: '简要描述问题' })),
+          h(ElFormItem, { label: '描述' }, () => h(ElInput, { modelValue: issue.createDesc, 'onUpdate:modelValue': (v) => (issue.createDesc = v), type: 'textarea', rows: 4, placeholder: '支持 Markdown' })),
+          h(ElFormItem, { label: '标签' }, () => h(ElInput, { modelValue: issue.createLabels, 'onUpdate:modelValue': (v) => (issue.createLabels = v), placeholder: '多个标签用逗号分隔' }))
+        ]),
+        footer: () => h('div', { class: 'dialog-foot' }, [
+          h('span', { class: 'flex-spacer' }),
+          h(ElButton, { onClick: () => (issue.createOpen = false) }, () => '取消'),
+          h(ElButton, { type: 'primary', onClick: issueCreate }, () => '创建')
         ])
-      ])])
+      })
+    }
+    function renderTrace() {
+      if (!pipe.traceJob) return null
+      return h(ElDialog, { modelValue: true, 'onUpdate:modelValue': (v) => { if (!v) pipe.traceJob = null }, title: 'Job 日志 · ' + pipe.traceJob.name, width: '780px' }, {
+        default: () => h('pre', { class: 'log-view' }, pipe.trace || '（无输出）'),
+        footer: () => h('div', { class: 'dialog-foot' }, [h('span', { class: 'flex-spacer' }), h(ElButton, { type: 'primary', onClick: () => (pipe.traceJob = null) }, () => '关闭')])
+      })
     }
 
-    /* ---------- 渲染：外壳 ---------- */
+    /* ---------- 根渲染 ---------- */
     return () => {
+      const cur = connections.value.find((c) => c.id === connId.value)
       const side = h('aside', { class: 'side' }, [
-        h('div', { class: 'side-head' }, [h('span', { style: { fontSize: '13px' } }, 'GitLab 连接'), h('button', { class: 'icon-btn', title: '新建连接', onClick: () => openEditor(null) }, '＋')]),
-        h('div', { class: 'conn-list' }, connections.value.length ? connections.value.map((c) => h('div', { class: ['conn-item', { active: c.id === connId.value }], onClick: () => selectConnection(c.id) }, [
-          h('span', { class: 'avatar' }, '🦊'), h('span', { class: 'nm' }, c.name),
-          h('button', { class: 'icon-btn', title: '编辑', onClick: (e) => { e.stopPropagation(); openEditor(c) } }, h('span', { innerHTML: '<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"/></svg>', style: { display: 'inline-flex' } }))
-        ])) : h('div', { style: { color: 'var(--text-secondary)', fontSize: '12px', padding: '6px 2px', lineHeight: '1.7' } }, '暂无连接，点右上角 ＋ 新建（需要 GitLab 地址与 Access Token）'))
-      ])
-      let main
-      if (!curConn.value) {
-        main = h('div', { class: 'list-empty', style: { margin: 'auto' } }, [h('div', { class: 'big' }, '欢迎使用 GitLab 管理台'), h('div', '在左侧新建一个连接（GitLab 地址 + Access Token），即可浏览项目与代码、评审合并请求、查看流水线并处理 Issue')])
-      } else {
-        const projBar = h('div', { class: 'proj-bar' }, [
-          h('input', { value: projSearch.value, placeholder: '搜索项目…', style: { height: '32px', width: '220px', marginBottom: 0 }, onInput: (e) => { projSearch.value = e.target.value }, onKeydown: (e) => { if (e.key === 'Enter') loadProjects(true) } }),
-          h('button', { class: ['btn', 'ghost', 'small'], onClick: () => loadProjects(true) }, '搜索'),
-          h('select', { value: curProject.value ? String(curProject.value.id) : '', style: { height: '32px', fontSize: '12.5px', width: 'auto', maxWidth: '380px', marginBottom: 0 }, onChange: (e) => { const p = projects.value.find((x) => String(x.id) === e.target.value); if (p) openProject(p) } }, [
-            h('option', { value: '', disabled: true }, projects.value.length ? '选择项目（共 ' + projPage.total + ' 个）' : '（暂无项目，点搜索加载）'),
-            ...projects.value.map((p) => h('option', { value: String(p.id) }, p.path_with_namespace || p.name))
+        h('div', { class: 'side-head' }, [
+          h('span', { class: 'side-title' }, 'GitLab 连接'),
+          h('span', { class: 'flex-spacer' }),
+          h(ElButton, { circle: true, size: 'small', icon: I.Plus, title: '新建连接', onClick: () => openEditor(null) })
+        ]),
+        connections.value.length ? h(ElScrollbar, { class: 'side-scroll' }, () => connections.value.map((c) => h('div', { class: ['conn-item', { active: c.id === connId.value }], onClick: () => selectConnection(c.id) }, [
+          h('span', { class: 'conn-avatar' }, (c.name || '?').slice(0, 1).toUpperCase()),
+          h('span', { class: 'conn-meta' }, [
+            h('span', { class: 'conn-name' }, c.name),
+            h('span', { class: 'conn-sub' }, String(c.baseUrl || '').replace(/^https?:\/\//, ''))
           ]),
-          projPage.totalPages > 1 && projects.value.length < projPage.total ? h('button', { class: ['btn', 'ghost', 'small'], disabled: projLoading.value, onClick: () => { projPage.page++; loadProjects(false) } }, '加载更多项目') : null,
-          curProject.value && curProject.value.web_url ? h('a', { href: curProject.value.web_url, target: '_blank', style: { fontSize: '12px' } }, '在 GitLab 打开 ↗') : null
+          h('span', { class: ['conn-dot', { on: cur && c.id === connId.value }] }),
+          h(ElButton, { text: true, size: 'small', class: 'conn-edit', icon: I.Edit, title: '编辑', onClick: (e) => { e.stopPropagation(); openEditor(c) } })
+        ]))) : h('div', { class: 'side-empty' }, '暂无连接，点右上角 + 新建（需要 GitLab 地址与 Access Token）')
+      ])
+      const projBar = h('div', { class: 'proj-bar' }, [
+        h(ElInput, { modelValue: projSearch.value, 'onUpdate:modelValue': (v) => (projSearch.value = v), size: 'small', placeholder: '搜索项目（名称或路径）', prefixIcon: I.Search, clearable: true, style: { width: '230px' }, onKeyup: (e) => { if (e.key === 'Enter') loadProjects(true) } }),
+        h(ElButton, { size: 'small', loading: projLoading.value, onClick: () => loadProjects(true) }, () => '搜索'),
+        h(ElSelect, { modelValue: curProject.value ? String(curProject.value.id) : '', 'onUpdate:modelValue': (v) => { const p = projects.value.find((x) => String(x.id) === String(v)); if (p) openProject(p) }, size: 'small', placeholder: projects.value.length ? '选择项目（共 ' + projPage.total + ' 个）' : '（暂无项目，先点搜索）', style: { width: '300px' }, noDataText: '无匹配项目' }, () =>
+          projects.value.map((p) => h(ElOption, { label: p.path_with_namespace || p.name, value: String(p.id) }))),
+        projPage.totalPages > 1 && projects.value.length < projPage.total ? h(ElButton, { size: 'small', text: true, loading: projLoading.value, onClick: () => { projPage.page++; loadProjects(false) } }, () => '加载更多项目') : null,
+        h('span', { class: 'flex-spacer' }),
+        curProject.value && curProject.value.web_url ? h(ElButton, { size: 'small', text: true, type: 'primary', onClick: () => window.open(curProject.value.web_url, '_blank') }, () => '在 GitLab 打开') : null
+      ])
+      const main = h('main', { class: 'main' }, [
+        projBar,
+        h(ElTabs, { modelValue: tab.value, 'onUpdate:modelValue': (v) => switchTab(v), class: 'main-tabs' }, () => [
+          h(ElTabPane, { label: '项目与代码', name: 'project' }, () => renderProjectTab()),
+          h(ElTabPane, { label: '合并请求', name: 'mr' }, () => renderMrTab()),
+          h(ElTabPane, { label: '流水线', name: 'pipeline' }, () => renderPipeTab()),
+          h(ElTabPane, { label: 'Issue', name: 'issue' }, () => renderIssueTab())
         ])
-        const tabContent = tab.value === 'project' ? renderProjectTab() : tab.value === 'mr' ? renderMrTab() : tab.value === 'pipeline' ? renderPipeTab() : renderIssueTab()
-        main = h('main', { class: 'main' }, [
-          projBar,
-          h('div', { class: 'gl-tabs' }, [['project', '项目与代码'], ['mr', '合并请求'], ['pipeline', '流水线'], ['issue', 'Issue']].map(([v, t]) => h('button', { class: ['gl-tab', { active: tab.value === v }], onClick: () => switchTab(v) }, t))),
-          tabContent
-        ])
-      }
-      return h('div', [
-        h('div', { class: 'topbar' }, [h('h1', 'GitLab 管理台'), h('span', { style: { flex: 1 } }), h('button', { class: ['btn', 'ghost'], onClick: toggleTheme }, uiTheme.value === 'dark' ? '切换浅色' : '切换深色')]),
+      ])
+      return h('div', { class: 'app-root' }, [
+        h('header', { class: 'topbar' }, [
+          h('span', { class: 'logo' }, [h(I.Connection, { size: 17 })]),
+          h('div', { class: 'title-block' }, [h('h1', 'GitLab 管理台'), h('span', { class: 'sub' }, '项目 · 合并请求 · 流水线 · Issue')]),
+          h('span', { class: 'flex-spacer' }),
+          h(ElButton, { text: true, icon: uiTheme.value === 'dark' ? I.Sunny : I.Moon, onClick: toggleTheme }, () => (uiTheme.value === 'dark' ? '切换浅色' : '切换深色'))
+        ]),
         h('div', { class: 'layout' }, [side, main]),
-        confirmModal.open ? renderConfirm() : null,
         editor.open ? renderEditor() : null,
         issue.createOpen ? renderIssueCreate() : null,
-        h('div', { class: ['toast', { show: toastShow.value }] }, toastText.value)
+        renderTrace()
       ])
     }
   }
 }
-createApp(App).mount('#app')
+const app = createApp(App)
+app.use(ElementPlus)
+app.mount('#app')

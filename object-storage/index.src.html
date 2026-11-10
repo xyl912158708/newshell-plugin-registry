@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="zh-CN">
+<html lang="zh-CN" class="dark">
 <head>
 <meta charset="UTF-8">
 <title>对象存储</title>
@@ -7,210 +7,109 @@
 /* 默认深色（与 NewShell 主界面一致）；用户可在页内右上角切换浅色，偏好会持久化。
  * 宿主与插件页跨源、媒体查询跟随操作系统，均无法可靠反映应用主题，故不做自动探测。 */
 document.documentElement.dataset.osTheme = 'dark'
-window.__osSetTheme = function (t) { document.documentElement.dataset.osTheme = t }
+window.__osSetTheme = function (t) { document.documentElement.dataset.osTheme = t; document.documentElement.classList.toggle('dark', t === 'dark') }
 </script>
-<!-- __PICO_CSS__ -->
+<!-- __EP_CSS__ -->
+<!-- __EP_DARK_CSS__ -->
 <style>
-  /* ===== 设计 token（映射 Pico 变量，深/浅跟随应用外观） ===== */
-  /* 注意：Pico 的深色变量只在 [data-theme="dark"] 或 :root:not([data-theme]) +
-   * 媒体查询下生效，而 Electron 中 prefers-color-scheme 可能误报 light，
-   * 故布局 token 直接取色板值（与 Pico 深色板同源），不依赖媒体查询。 */
+  /* ===== 换肤：Element Plus 变量 → 宿主设计令牌（深色必须挂 html.dark） ===== */
   :root {
+    --el-border-radius-base: 6px;
+    --el-border-radius-small: 4px;
+    --el-font-family: 'DM Sans Variable', 'DM Sans', -apple-system, 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', sans-serif;
+    --el-font-size-base: 13px;
+    --app-on-accent: #ffffff;
+    --app-code-font: 'JetBrains Mono Variable', 'JetBrains Mono', Consolas, 'Courier New', monospace;
+  }
+  html:not(.dark) {
+    color-scheme: light;
+    --el-color-primary: #0f766e; --el-color-primary-light-3: #579f96; --el-color-primary-light-5: #87bab3; --el-color-primary-light-7: #b7d8d3; --el-color-primary-light-8: #cfe8e4; --el-color-primary-light-9: #e7f2f0; --el-color-primary-dark-2: #0c5f58;
+    --el-color-success: #15803d; --el-color-success-light-9: #e8f5ec;
+    --el-color-warning: #b45309; --el-color-warning-light-9: #faf0e2;
+    --el-color-danger: #dc2626; --el-color-danger-light-9: #fbe9e9;
+    --el-color-info: #2563eb; --el-color-info-light-9: #e8effc;
+    --el-bg-color-page: #f5f6f8; --el-bg-color: #ffffff; --el-bg-color-overlay: #ffffff;
+    --el-text-color-primary: #111827; --el-text-color-regular: #4b5563; --el-text-color-secondary: #5b6b82; --el-text-color-placeholder: #8494b3;
+    --el-border-color: rgba(0,0,0,.16); --el-border-color-light: rgba(0,0,0,.12); --el-border-color-lighter: rgba(0,0,0,.09); --el-border-color-extra-light: rgba(0,0,0,.05);
+    --el-fill-color: #e2e6ee; --el-fill-color-light: #edf0f4; --el-fill-color-lighter: #f5f6f8; --el-fill-color-blank: #ffffff; --el-fill-color-dark: #d5dae4;
+  }
+  html.dark {
     color-scheme: dark;
-    --bg-primary: #080b12;
-    --bg-secondary: #0f131e;
-    --bg-tertiary: #171d2c;
-    --text-primary: #e6ecf3;
-    --text-secondary: #9aa4b8;
-    --text-muted: #8494b3;
-    --accent-color: #2dd4bf;
-    --border-color: rgba(255,255,255,0.09);
+    --el-color-primary: #2dd4bf; --el-color-primary-light-3: #35a08f; --el-color-primary-light-5: #2b7a6e; --el-color-primary-light-7: #24584f; --el-color-primary-light-8: #20453e; --el-color-primary-light-9: #1d3833; --el-color-primary-dark-2: #5eead4;
+    --el-color-success: #4ade80; --el-color-success-light-9: #173325;
+    --el-color-warning: #fbbf24; --el-color-warning-light-9: #3a2f14;
+    --el-color-danger: #f87171; --el-color-danger-light-9: #3d1d20;
+    --el-color-info: #60a5fa; --el-color-info-light-9: #1d2c47;
+    --el-bg-color-page: #080b12; --el-bg-color: #0f131e; --el-bg-color-overlay: #171d2c;
+    --el-text-color-primary: #e6ecf3; --el-text-color-regular: #9aa4b8; --el-text-color-secondary: #8494b3; --el-text-color-placeholder: #5f7089;
+    --el-border-color: rgba(255,255,255,.13); --el-border-color-light: rgba(255,255,255,.1); --el-border-color-lighter: rgba(255,255,255,.07); --el-border-color-extra-light: rgba(255,255,255,.04);
+    --el-fill-color: #1e2536; --el-fill-color-light: #171d2c; --el-fill-color-lighter: #12172a; --el-fill-color-blank: #0f131e; --el-fill-color-dark: #262f47;
+    --el-disabled-bg-color: #12172a;
+    --app-on-accent: #0a0f14;
   }
-  @media (prefers-color-scheme: light) {
-    :root {
-      color-scheme: light;
-      --bg-primary: #ffffff;
-      --bg-secondary: #f5f6f8;
-      --bg-tertiary: #edf0f4;
-      --text-primary: #111827;
-      --text-secondary: #4b5563;
-      --text-muted: #5b6b82;
-      --accent-color: #0f766e;
-      --border-color: rgba(0,0,0,0.13);
-    }
+  html.dark .el-button--primary {
+    --el-button-text-color: #0a0f14; --el-button-hover-text-color: #0a0f14; --el-button-active-text-color: #0a0f14;
   }
-  /* Pico 控件色板在 .pico 作用域内跟随媒体查询切换（宿主为 Electron，
-   * 应用设置浅色时 nativeTheme 同步切换媒体查询，实测可靠）。 */
-  .pico {
-    --pico-font-size: 81.25%;
-    --pico-border-radius: 0.375rem;
-    --pico-form-element-spacing-vertical: 0.42rem;
-    --pico-form-element-spacing-horizontal: 0.65rem;
-    --pico-background-color: #080b12;
-    --pico-color: #e6ecf3;
-    --pico-h1-color: #e6ecf3; --pico-h2-color: #e6ecf3; --pico-h3-color: #e6ecf3; --pico-h4-color: #e6ecf3; --pico-h5-color: #e6ecf3; --pico-h6-color: #e6ecf3;
-    --pico-muted-color: #9aa4b8;
-    --pico-muted-border-color: rgba(255,255,255,0.05);
-    --pico-card-background-color: #0f131e;
-    --pico-card-border-color: rgba(255,255,255,0.09);
-    --pico-dropdown-hover-background-color: #171d2c;
-    --pico-form-element-background-color: #0d1220;
-    --pico-form-element-border-color: rgba(255,255,255,0.09);
-    --pico-form-element-color: #e6ecf3;
-    --pico-form-element-placeholder-color: #8494b3;
-    --pico-form-element-active-background-color: #0d1220;
-    --pico-form-element-active-border-color: #2dd4bf;
-    --pico-form-element-focus-color: color-mix(in srgb, #2dd4bf 55%, transparent);
-    --pico-switch-background-color: rgba(255,255,255,0.09);
-    --pico-primary-background: #2dd4bf; --pico-primary-border: #2dd4bf;
-    --pico-primary-hover-background: #14b8a6; --pico-primary-hover-border: #14b8a6;
-    --pico-primary-focus: color-mix(in srgb, #2dd4bf 55%, transparent);
-    --pico-primary: #0a0f14; --pico-primary-hover: #0a0f14; --pico-primary-inverse: #0a0f14;
-    --pico-h1-color: #e6ecf3; --pico-h2-color: #e6ecf3; --pico-h3-color: #e6ecf3; --pico-h4-color: #e6ecf3; --pico-h5-color: #e6ecf3; --pico-h6-color: #e6ecf3;
-  }
-  @media (prefers-color-scheme: light) {
-    .pico {
-      --pico-background-color: #ffffff;
-      --pico-color: #111827;
-      --pico-h1-color: #111827; --pico-h2-color: #111827; --pico-h3-color: #111827; --pico-h4-color: #111827; --pico-h5-color: #111827; --pico-h6-color: #111827;
-      --pico-muted-color: #4b5563;
-      --pico-muted-border-color: #edf0f4;
-      --pico-card-background-color: #f5f6f8;
-      --pico-card-border-color: rgba(0,0,0,0.13);
-      --pico-dropdown-hover-background-color: #edf0f4;
-      --pico-form-element-background-color: #ffffff;
-      --pico-form-element-border-color: rgba(0,0,0,0.13);
-      --pico-form-element-color: #111827;
-      --pico-form-element-placeholder-color: #5b6b82;
-      --pico-form-element-active-background-color: #ffffff;
-      --pico-form-element-active-border-color: #0f766e;
-      --pico-form-element-focus-color: color-mix(in srgb, #0f766e 45%, transparent);
-      --pico-primary-background: #0f766e; --pico-primary-border: #0f766e;
-      --pico-primary-hover-background: #115e59; --pico-primary-hover-border: #115e59;
-      --pico-primary-focus: color-mix(in srgb, #0f766e 45%, transparent);
-      --pico-primary: #ffffff; --pico-primary-hover: #ffffff; --pico-primary-inverse: #ffffff;
-    }
-  }
-  * { margin: 0; padding: 0; box-sizing: border-box; }
-  #app { height: 100%; display: flex; flex-direction: column; }
-  body {
-    height: 100vh; overflow: hidden;
-    font-family: var(--pico-font-family);
-    background: var(--bg-primary, #080b12); color: var(--text-primary, #e6ecf3);
-    font-size: 13px; padding: 14px 16px 22px; -webkit-font-smoothing: antialiased;
-  }
-  /* 主题接管：JS 按宿主 html/body 的 light 类给 <html> 打 data-os-theme，
-   * 全部 token 以该属性为准（!特异性高于媒体查询块），根治宿主与系统外观不一致。 */
-  :root[data-os-theme="dark"] {
-    color-scheme: dark;
+  /* ===== OS 旧令牌桥：保留的布局 CSS 继续用旧变量名，值随主题切换 ===== */
+  html.dark {
     --bg-primary: #080b12; --bg-secondary: #0f131e; --bg-tertiary: #171d2c;
     --text-primary: #e6ecf3; --text-secondary: #9aa4b8; --text-muted: #8494b3;
-    --accent-color: #2dd4bf; --border-color: rgba(255,255,255,0.09);
+    --accent-color: #2dd4bf; --border-color: rgba(255,255,255,.09);
+    --danger-color: #f87171; --success-color: #4ade80; --warning-color: #fbbf24; --info-color: #60a5fa;
   }
-  :root[data-os-theme="light"] {
-    color-scheme: light;
+  html:not(.dark) {
     --bg-primary: #ffffff; --bg-secondary: #f5f6f8; --bg-tertiary: #edf0f4;
     --text-primary: #111827; --text-secondary: #4b5563; --text-muted: #5b6b82;
-    --accent-color: #0f766e; --border-color: rgba(0,0,0,0.13);
+    --accent-color: #0f766e; --border-color: rgba(0,0,0,.13);
+    --danger-color: #dc2626; --success-color: #15803d; --warning-color: #b45309; --info-color: #2563eb;
   }
-  :root[data-os-theme="dark"] .pico {
-    --pico-background-color: #080b12; --pico-color: #e6ecf3;
-    --pico-h1-color: #e6ecf3; --pico-h2-color: #e6ecf3; --pico-h3-color: #e6ecf3; --pico-h4-color: #e6ecf3; --pico-h5-color: #e6ecf3; --pico-h6-color: #e6ecf3;
-    --pico-muted-color: #9aa4b8; --pico-muted-border-color: rgba(255,255,255,0.05);
-    --pico-card-background-color: #0f131e; --pico-card-border-color: rgba(255,255,255,0.09);
-    --pico-dropdown-hover-background-color: #171d2c;
-    --pico-form-element-background-color: #0d1220; --pico-form-element-border-color: rgba(255,255,255,0.09);
-    --pico-form-element-color: #e6ecf3; --pico-form-element-placeholder-color: #8494b3;
-    --pico-form-element-active-background-color: #0d1220; --pico-form-element-active-border-color: #2dd4bf;
-    --pico-form-element-focus-color: color-mix(in srgb, #2dd4bf 55%, transparent);
-    --pico-switch-background-color: rgba(255,255,255,0.09);
-    --pico-primary-background: #2dd4bf; --pico-primary-border: #2dd4bf;
-    --pico-primary-hover-background: #14b8a6; --pico-primary-hover-border: #14b8a6;
-    --pico-primary-focus: color-mix(in srgb, #2dd4bf 55%, transparent);
-    --pico-primary: #0a0f14; --pico-primary-hover: #0a0f14; --pico-primary-inverse: #0a0f14;
-  }
-  :root[data-os-theme="light"] .pico {
-    --pico-background-color: #ffffff; --pico-color: #111827;
-    --pico-h1-color: #111827; --pico-h2-color: #111827; --pico-h3-color: #111827; --pico-h4-color: #111827; --pico-h5-color: #111827; --pico-h6-color: #111827;
-    --pico-muted-color: #4b5563; --pico-muted-border-color: #edf0f4;
-    --pico-card-background-color: #f5f6f8; --pico-card-border-color: rgba(0,0,0,0.13);
-    --pico-dropdown-hover-background-color: #edf0f4;
-    --pico-form-element-background-color: #ffffff; --pico-form-element-border-color: rgba(0,0,0,0.13);
-    --pico-form-element-color: #111827; --pico-form-element-placeholder-color: #5b6b82;
-    --pico-form-element-active-background-color: #ffffff; --pico-form-element-active-border-color: #0f766e;
-    --pico-form-element-focus-color: color-mix(in srgb, #0f766e 45%, transparent);
-    --pico-primary-background: #0f766e; --pico-primary-border: #0f766e;
-    --pico-primary-hover-background: #115e59; --pico-primary-hover-border: #115e59;
-    --pico-primary-focus: color-mix(in srgb, #0f766e 45%, transparent);
-    --pico-primary: #ffffff; --pico-primary-hover: #ffffff; --pico-primary-inverse: #ffffff;
-    --pico-h1-color: #111827; --pico-h2-color: #111827; --pico-h3-color: #111827; --pico-h4-color: #111827; --pico-h5-color: #111827; --pico-h6-color: #111827;
-  }
-  ::-webkit-scrollbar { width: 9px; height: 9px; }
-  ::-webkit-scrollbar-thumb { background: var(--border-color); border-radius: 5px; border: 2px solid var(--bg-primary); }
-  button { font: inherit; cursor: pointer; }
-  input, select { font: inherit; }
-  input[type="checkbox"] { accent-color: var(--accent-color); width: 14px; height: 14px; cursor: pointer; margin: 0; }
-  .btn {
-    display: inline-flex; align-items: center; gap: 6px; width: auto;
-    margin-bottom: 0; font-weight: 600; line-height: 1.5; white-space: nowrap; padding: 5px 12px; font-size: 12.5px;
-  }
-  .btn.ghost { background: transparent; color: var(--text-primary); border-color: var(--border-color); font-weight: 500; box-shadow: none; }
-  .btn.ghost:hover { background: var(--bg-tertiary); color: var(--text-primary); border-color: var(--border-color); }
-  .btn.danger { background: #f87171; border-color: #f87171; color: #0a0f14; }
-  .btn.danger:hover { background: #f87171; border-color: #f87171; }
-  .btn.small { padding: 2px 9px; font-size: 11.5px; }
-  .btn svg { width: 14px; height: 14px; flex: none; }
-  .pico .icon-btn {
-    background: transparent; border: 1px solid transparent; color: var(--text-secondary);
-    width: 26px; height: 26px; border-radius: 6px; display: inline-flex; align-items: center; justify-content: center; padding: 0;
-  }
-  .icon-btn:hover { background: var(--bg-tertiary); color: var(--text-primary); }
-  .icon-btn svg { width: 15px; height: 15px; }
 
-  .topbar { display: flex; align-items: center; gap: 10px; margin-bottom: 14px; }
-  .topbar .logo {
-    width: 32px; height: 32px; border-radius: 8px; flex: none;
-    background: color-mix(in srgb, var(--accent-color) 18%, transparent); color: var(--accent-color);
-    display: flex; align-items: center; justify-content: center;
-  }
-  .topbar .logo svg { width: 18px; height: 18px; }
-  .topbar h1 { font-size: 15.5px; font-weight: 650; letter-spacing: .2px; }
-  .topbar .sub { font-size: 11.5px; color: var(--text-muted); margin-top: 1px; }
-  .topbar .spacer { flex: 1; }
+  /* ===== 布局 ===== */
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body, #app { height: 100%; }
+  body { margin: 0; overflow: hidden; background: var(--el-bg-color-page); color: var(--el-text-color-primary); font-family: var(--el-font-family); font-size: 13px; -webkit-font-smoothing: antialiased; }
+  ::-webkit-scrollbar { width: 9px; height: 9px; }
+  ::-webkit-scrollbar-thumb { background: var(--el-border-color); border-radius: 5px; border: 2px solid var(--el-bg-color-page); }
+  .app-root { display: flex; flex-direction: column; height: 100vh; background: var(--el-bg-color-page); color: var(--el-text-color-primary); }
+  .topbar { height: 46px; flex: none; display: flex; align-items: center; gap: 10px; padding: 0 14px; background: var(--el-bg-color); border-bottom: 1px solid var(--el-border-color-lighter); }
+  .logo { width: 28px; height: 28px; border-radius: 7px; background: var(--el-color-primary); color: var(--app-on-accent); display: flex; align-items: center; justify-content: center; flex: none; }
+  .logo svg { width: 17px; height: 17px; }
+  .title-block { display: flex; flex-direction: column; line-height: 1.25; }
+  .title-block h1 { font-size: 14px; font-weight: 650; margin: 0; }
+  .title-block .sub { font-size: 11px; color: var(--el-text-color-secondary); }
+  .flex-spacer { flex: 1; }
+  .os-content { flex: 1; min-height: 0; display: flex; flex-direction: column; padding: 14px 16px 16px; }
+  .mono { font-family: var(--app-code-font); }
+  .err-text { color: var(--el-color-danger); font-size: 12.5px; white-space: pre-wrap; word-break: break-all; }
+  .ok-text { color: var(--el-color-success); font-size: 12.5px; }
+  .hint { font-size: 11.5px; color: var(--text-muted); margin-top: 4px; line-height: 1.55; }
+  .dialog-foot { display: flex; align-items: center; gap: 8px; }
+  .btn-ico { display: inline-flex; margin-right: 5px; }
+  .btn-ico svg { width: 14px; height: 14px; }
+  .test-line { display: inline-flex; align-items: center; gap: 10px; }
 
   .layout { display: flex; gap: 14px; align-items: stretch; flex: 1; min-height: 0; }
   .side { width: 252px; flex: none; display: flex; flex-direction: column; gap: 12px; overflow-y: auto; }
-  .side-box {
-    background: var(--bg-secondary); border: 1px solid color-mix(in srgb, var(--border-color) 55%, transparent);
-    border-radius: 10px; padding: 10px;
-  }
+  .side-box { background: var(--bg-secondary); border: 1px solid var(--el-border-color-lighter); border-radius: 10px; padding: 10px; }
+  html.dark .side-box { background: var(--el-bg-color); }
   .side-head { display: flex; align-items: center; justify-content: space-between; font-size: 12px; font-weight: 600; color: var(--text-secondary); padding: 0 2px 8px; }
-  .side-head .icon-btn { width: 22px; height: 22px; background: transparent; border-color: transparent; box-shadow: none; }
-  .side-head .icon-btn:hover { background: var(--bg-tertiary); }
-  .side-head .icon-btn svg { width: 13px; height: 13px; }
-
   .conn-item { display: flex; align-items: center; gap: 9px; padding: 7px 8px; border-radius: 8px; cursor: pointer; margin-bottom: 2px; border: 1px solid transparent; }
   .conn-item:hover { background: var(--bg-tertiary); }
-  .conn-item.active { background: var(--bg-tertiary); border-color: color-mix(in srgb, var(--border-color) 60%, transparent); box-shadow: inset 2px 0 0 var(--accent-color); }
+  .conn-item.active { background: color-mix(in srgb, var(--accent-color) 9%, transparent); border-color: var(--el-border-color-lighter); box-shadow: inset 2px 0 0 var(--accent-color); }
   .conn-avatar { width: 30px; height: 30px; border-radius: 7px; flex: none; display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 700; }
   .conn-meta { flex: 1; min-width: 0; }
   .conn-name { display: block; font-size: 13px; font-weight: 550; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .conn-sub { display: block; font-size: 11px; color: var(--text-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-top: 1px; }
-  .conn-dot { width: 7px; height: 7px; border-radius: 50%; background: #4ade80; flex: none; }
-  .conn-item .icon-btn { opacity: 0; flex: none; }
-  .conn-item:hover .icon-btn, .conn-item.active .icon-btn { opacity: 1; }
-  .form-row label.check-row { display: flex; align-items: center; gap: 8px; font-weight: 500; color: var(--text-primary); cursor: pointer; }
-
-  .bucket-item { display: flex; align-items: center; gap: 8px; padding: 6px 8px; border-radius: 7px; cursor: pointer; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: var(--text-secondary); }
+  .conn-edit { opacity: 0; flex: none; }
+  .conn-item:hover .conn-edit, .conn-item.active .conn-edit { opacity: 1; }
+  .bucket-item { display: flex; align-items: center; gap: 8px; padding: 6px 8px; border-radius: 7px; cursor: pointer; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: var(--text-secondary); font-size: 12.5px; }
   .bucket-item:hover { background: var(--bg-tertiary); color: var(--text-primary); }
-  .bucket-item.active { background: var(--bg-tertiary); color: var(--text-primary); box-shadow: inset 2px 0 0 var(--accent-color); }
+  .bucket-item.active { background: color-mix(in srgb, var(--accent-color) 12%, transparent); color: var(--accent-color); }
   .bucket-item svg { width: 14px; height: 14px; flex: none; opacity: .8; }
   .bucket-item .grow { flex: 1; overflow: hidden; text-overflow: ellipsis; }
   .bucket-join { display: flex; gap: 6px; margin-top: 9px; }
-  .bucket-join input { margin-bottom: 0; }
   .empty-hint { color: var(--text-muted); font-size: 12px; padding: 4px 2px; line-height: 1.65; }
   .tip-text { color: var(--text-muted); font-size: 11.5px; line-height: 1.7; padding: 0 2px; }
-  .text-input { background: var(--bg-primary); margin-bottom: 0; }
 
   .main { flex: 1; min-width: 0; display: flex; flex-direction: column; min-height: 0; }
   .crumbs { display: flex; align-items: center; gap: 2px; flex-wrap: wrap; margin-bottom: 10px; font-size: 13px; min-height: 26px; }
@@ -223,7 +122,8 @@ window.__osSetTheme = function (t) { document.documentElement.dataset.osTheme = 
   .toolbar .sel-info { color: var(--text-secondary); font-size: 12px; margin-right: 2px; }
   .batch-bar { background: color-mix(in srgb, var(--accent-color) 9%, var(--bg-secondary)); border: 1px solid color-mix(in srgb, var(--accent-color) 30%, transparent); border-radius: 8px; padding: 5px 8px; }
 
-  .list-wrap { border: 1px solid color-mix(in srgb, var(--border-color) 55%, transparent); border-radius: 10px; overflow: hidden; background: var(--bg-secondary); display: flex; flex-direction: column; flex: 1; min-height: 0; }
+  .list-wrap { border: 1px solid var(--el-border-color-lighter); border-radius: 10px; overflow: hidden; background: var(--bg-secondary); display: flex; flex-direction: column; flex: 1; min-height: 0; }
+  html.dark .list-wrap { background: var(--el-bg-color); }
   .list-head, .row { display: grid; grid-template-columns: 30px minmax(0, 1fr) 96px 158px 128px; align-items: center; padding: 0 10px; column-gap: 8px; }
   @media (max-width: 1120px) {
     .list-head, .row { grid-template-columns: 28px minmax(0, 1fr) 88px 126px; }
@@ -233,10 +133,11 @@ window.__osSetTheme = function (t) { document.documentElement.dataset.osTheme = 
     .side { width: 208px; }
     .list-head, .row { grid-template-columns: 26px minmax(0, 1fr) 74px 118px; padding: 0 8px; column-gap: 6px; }
   }
-  .list-head { height: 34px; font-size: 12px; color: var(--text-secondary); font-weight: 550; border-bottom: 1px solid color-mix(in srgb, var(--border-color) 55%, transparent); background: var(--bg-primary); }
+  .list-head { height: 34px; font-size: 12px; color: var(--text-secondary); font-weight: 550; border-bottom: 1px solid var(--el-border-color-lighter); background: var(--bg-primary); }
+  html.dark .list-head { background: var(--el-bg-color-page); }
   .viewport { flex: 1; min-height: 120px; overflow-y: auto; position: relative; }
   .spacer { position: relative; width: 100%; }
-  .row { height: 42px; position: absolute; left: 0; right: 0; border-bottom: 1px solid color-mix(in srgb, var(--border-color) 32%, transparent); }
+  .row { height: 42px; position: absolute; left: 0; right: 0; border-bottom: 1px solid var(--el-border-color-extra-light); }
   .row:hover { background: var(--bg-tertiary); }
   .row.selected { background: color-mix(in srgb, var(--accent-color) 13%, transparent); }
   .row .name { display: flex; align-items: center; gap: 9px; overflow: hidden; white-space: nowrap; }
@@ -244,97 +145,64 @@ window.__osSetTheme = function (t) { document.documentElement.dataset.osTheme = 
   .row .dir { cursor: pointer; font-weight: 550; }
   .row .dir:hover .fname { color: var(--accent-color); }
   .file-tile { width: 27px; height: 27px; border-radius: 7px; flex: none; background: var(--bg-primary); color: var(--text-secondary); display: flex; align-items: center; justify-content: center; }
+  html.dark .file-tile { background: var(--el-bg-color-page); }
   .file-tile.dir { color: var(--accent-color); background: color-mix(in srgb, var(--accent-color) 13%, transparent); }
   .file-tile svg { width: 15px; height: 15px; }
   .row .meta { color: var(--text-secondary); font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .row .acts { display: flex; gap: 1px; justify-content: flex-end; opacity: 0; transition: opacity .12s; }
   .row:hover .acts, .row.selected .acts { opacity: 1; }
+  .row-act svg { width: 15px; height: 15px; display: block; }
   .list-empty { padding: 44px 20px; text-align: center; color: var(--text-muted); }
   .list-empty .big { font-size: 15px; color: var(--text-secondary); margin-bottom: 5px; font-weight: 550; }
-  .list-foot { padding: 8px 12px; font-size: 12px; color: var(--text-secondary); display: flex; gap: 10px; align-items: center; border-top: 1px solid color-mix(in srgb, var(--border-color) 40%, transparent); }
+  .list-foot { padding: 8px 12px; font-size: 12px; color: var(--text-secondary); display: flex; gap: 10px; align-items: center; border-top: 1px solid var(--el-border-color-lighter); }
 
-  .tasks { margin-top: 14px; border: 1px solid color-mix(in srgb, var(--border-color) 55%, transparent); border-radius: 10px; background: var(--bg-secondary); overflow: hidden; }
+  .tasks { margin-top: 14px; border: 1px solid var(--el-border-color-lighter); border-radius: 10px; background: var(--bg-secondary); overflow: hidden; }
+  html.dark .tasks { background: var(--el-bg-color); }
   .tasks-head { display: flex; align-items: center; gap: 8px; padding: 9px 12px; cursor: pointer; background: var(--bg-primary); font-weight: 600; font-size: 12.5px; }
+  html.dark .tasks-head { background: var(--el-bg-color-page); }
   .tasks-head > svg { width: 15px; height: 15px; color: var(--text-secondary); }
-  .tasks-head .badge { background: var(--accent-color); color: #0a0f14; border-radius: 9px; padding: 0 7px; font-size: 11px; line-height: 17px; font-weight: 600; }
-  .tasks-head .badge.err { background: #f87171; }
-  .task { padding: 8px 12px; border-top: 1px solid color-mix(in srgb, var(--border-color) 32%, transparent); }
+  .tasks-head .badge { background: var(--accent-color); color: var(--app-on-accent); border-radius: 9px; padding: 0 7px; font-size: 11px; line-height: 17px; font-weight: 600; }
+  .tasks-head .badge.err { background: var(--danger-color); color: #fff; }
+  .task { padding: 8px 12px; border-top: 1px solid var(--el-border-color-extra-light); }
   .task .t-row { display: flex; align-items: center; gap: 8px; }
   .task .t-ico { color: var(--text-secondary); display: inline-flex; }
   .task .t-ico svg { width: 14px; height: 14px; }
   .task .t-name { flex: 1; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
   .task .t-status { font-size: 11.5px; color: var(--text-secondary); white-space: nowrap; }
-  .task .t-status.failed { color: #f87171; }
-  .task .t-status.done { color: #4ade80; }
-  .bar { height: 4px; border-radius: 2px; background: var(--bg-primary); margin-top: 7px; overflow: hidden; }
-  .bar > i { display: block; height: 100%; background: var(--accent-color); border-radius: 2px; transition: width .15s; }
-  .bar > i.failed { background: #f87171; }
-  .bar > i.done { background: #4ade80; }
-
-  .mask { position: fixed; inset: 0; background: rgba(0,0,0,.52); display: flex; align-items: center; justify-content: center; z-index: 50; }
-  .modal { background: var(--bg-primary); border: 1px solid color-mix(in srgb, var(--border-color) 70%, transparent); border-radius: 12px; width: 520px; max-width: 94vw; max-height: 92vh; overflow-y: auto; padding: 18px; box-shadow: 0 16px 40px rgba(0,0,0,.35); }
-  .modal.wide { width: 860px; }
-  .modal h2 { font-size: 14.5px; font-weight: 650; margin-bottom: 14px; }
-  .form-row { margin-bottom: 11px; }
-  .form-row label { display: block; font-size: 12px; color: var(--text-secondary); margin-bottom: 4px; font-weight: 550; }
-  .form-row .hint { font-size: 11.5px; color: var(--text-muted); margin-top: 4px; line-height: 1.55; }
-  .modal .foot { display: flex; justify-content: flex-end; align-items: center; gap: 8px; margin-top: 16px; }
-  .modal input:not([type="checkbox"]), .modal select { height: 34px; min-height: 34px; padding: 0 10px; font-size: 13px; margin-bottom: 0; }
-  .modal .form-row { margin-bottom: 9px; }
-  .modal .form-row label { margin-bottom: 4px; }
-  .err-text { color: #f87171; font-size: 12.5px; white-space: pre-wrap; word-break: break-all; }
-  .ok-text { color: #4ade80; font-size: 12.5px; }
+  .task .t-status.failed { color: var(--danger-color); }
+  .task .t-status.done { color: var(--success-color); }
+  .task .el-progress { margin-top: 7px; }
 
   .preview-body { display: flex; align-items: center; justify-content: center; min-height: 300px; }
   .preview-body img { max-width: 100%; max-height: 66vh; border-radius: 6px; }
-  .preview-body pre { width: 100%; max-height: 66vh; overflow: auto; background: var(--bg-secondary); padding: 12px; border-radius: 8px; font-size: 12px; line-height: 1.55; white-space: pre-wrap; word-break: break-all; }
-  .md-body { width: 100%; max-height: 66vh; overflow: auto; background: var(--bg-secondary); padding: 14px 18px; border-radius: 8px; line-height: 1.7; }
-  .md-body h1, .md-body h2, .md-body h3 { margin: 12px 0 6px; }
-  .md-body code { background: var(--bg-primary); padding: 1px 5px; border-radius: 4px; font-size: 12px; }
-  .md-body pre code { display: block; padding: 10px; overflow-x: auto; }
-  .md-body a { color: var(--accent-color); }
-  .md-body table { border-collapse: collapse; margin: 8px 0; }
-  .md-body td, .md-body th { border: 1px solid var(--border-color); padding: 4px 9px; }
+  .preview-body pre { width: 100%; max-height: 66vh; overflow: auto; background: var(--bg-secondary); padding: 12px; border-radius: 8px; font-size: 12px; line-height: 1.55; white-space: pre-wrap; word-break: break-all; font-family: var(--app-code-font); }
+  .md-body { width: 100%; max-height: 66vh; overflow: auto; background: var(--bg-secondary); padding: 14px 18px; border-radius: 8px; line-height: 1.7; font-size: 13px; color: var(--text-primary); word-break: break-word; }
+  .md-body p { margin: 6px 0; }
+  .md-body h1, .md-body h2, .md-body h3, .md-body h4 { margin: 14px 0 6px; line-height: 1.35; }
+  .md-body h1 { font-size: 19px; } .md-body h2 { font-size: 16.5px; } .md-body h3 { font-size: 14.5px; }
+  .md-body a { color: var(--accent-color); text-decoration: none; }
+  .md-body code { background: var(--bg-primary); padding: 1px 5px; border-radius: 4px; font-size: 12px; font-family: var(--app-code-font); }
+  .md-body pre { background: var(--bg-primary); border-radius: 8px; padding: 10px 12px; overflow: auto; }
+  .md-body pre code { background: none; padding: 0; }
+  .md-body blockquote { margin: 8px 0; padding: 2px 12px; border-left: 3px solid var(--border-color); color: var(--text-secondary); }
+  .md-body table { border-collapse: collapse; margin: 8px 0; font-size: 12.5px; }
+  .md-body td, .md-body th { border: 1px solid var(--border-color); padding: 5px 10px; text-align: left; }
+  .md-body ul, .md-body ol { margin: 6px 0; padding-left: 22px; }
+  .md-body hr { border: none; border-top: 1px solid var(--border-color); margin: 12px 0; }
+  .md-body img { max-width: 100%; }
   #glCanvas { width: 100%; height: 56vh; background: #0f131e; border-radius: 8px; touch-action: none; }
-  .toast {
-    position: fixed; left: 50%; bottom: 22px; transform: translateX(-50%) translateY(20px);
-    background: var(--bg-tertiary); color: var(--text-primary);
-    border: 1px solid color-mix(in srgb, var(--border-color) 70%, transparent);
-    padding: 8px 16px; border-radius: 8px; font-size: 12.5px; opacity: 0; pointer-events: none; transition: all .2s; z-index: 99;
-    max-width: 80vw; white-space: pre-wrap; box-shadow: 0 8px 24px rgba(0,0,0,.3);
-  }
-  .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
   .spin { display: inline-block; animation: sp 1s linear infinite; }
   @keyframes sp { to { transform: rotate(360deg); } }
-  .no-session { padding: 60px 30px; text-align: center; }
-  .no-session .big { font-size: 17px; font-weight: 650; margin-bottom: 10px; }
+  .no-session { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; padding: 40px 30px; }
   .no-session p { color: var(--text-secondary); line-height: 1.8; }
-  .no-session code { background: var(--bg-secondary); padding: 1px 6px; border-radius: 4px; }
-
-  /* ===== 精修层：对齐宿主 NewShell 设计语言（青绿强调 / 紧凑密度 / 发丝线） ===== */
-  :root { --danger-color: #f87171; --success-color: #4ade80; --warning-color: #fbbf24; --info-color: #60a5fa; }
-  :root[data-os-theme="light"] { --danger-color: #dc2626; --success-color: #15803d; --warning-color: #b45309; --info-color: #2563eb; }
-  body { font-family: 'DM Sans Variable', 'DM Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', 'Noto Sans SC', system-ui, sans-serif; }
-  .mono, code, kbd { font-family: 'JetBrains Mono Variable', 'JetBrains Mono', ui-monospace, 'SF Mono', Consolas, 'Microsoft YaHei', monospace; }
-  .pico .btn { height: 30px; padding: 0 12px; border-radius: 6px; font-size: 12.5px; line-height: 1; font-weight: 550; flex: none; box-shadow: none; transition: background-color .15s cubic-bezier(.4, 0, .2, 1), border-color .15s cubic-bezier(.4, 0, .2, 1), color .15s cubic-bezier(.4, 0, .2, 1); }
-  .pico .btn.small { height: 26px; padding: 0 9px; font-size: 11.5px; }
-  .pico .btn.danger { background: color-mix(in srgb, var(--danger-color) 13%, transparent); border-color: color-mix(in srgb, var(--danger-color) 32%, transparent); color: var(--danger-color); }
-  .pico .btn.danger:hover { background: color-mix(in srgb, var(--danger-color) 22%, transparent); border-color: color-mix(in srgb, var(--danger-color) 45%, transparent); color: var(--danger-color); }
-  .pico .gl-tab { height: 28px; padding: 0 13px; display: inline-flex; align-items: center; flex: none; transition: background-color .15s, color .15s, border-color .15s; }
-  .pico .gl-tab.active { background: color-mix(in srgb, var(--accent-color) 14%, transparent); border-color: color-mix(in srgb, var(--accent-color) 42%, transparent); color: var(--accent-color); }
-  :root[data-os-theme="light"] .pico .gl-tab.active { color: var(--accent-color); }
-  .pico .nav-item.active { background: color-mix(in srgb, var(--accent-color) 12%, transparent); border-color: color-mix(in srgb, var(--accent-color) 35%, transparent); color: var(--accent-color); }
-  .conn-item.active { background: color-mix(in srgb, var(--accent-color) 9%, transparent); }
-  .bucket-item.active { background: color-mix(in srgb, var(--accent-color) 12%, transparent); color: var(--accent-color); }
-  .pico input:not([type="checkbox"]):not([type="radio"]):not([type="file"]), .pico select { height: 32px; padding-top: 0; padding-bottom: 0; border-radius: 6px; font-size: 13px; }
-  .pico textarea { border-radius: 6px; font-size: 13px; }
-  .pico .icon-btn { flex: none; }
 </style>
 </head>
 <body class="pico">
 <div id="app" v-cloak></div>
 
 <!-- __VUE_JS__ -->
+<!-- __EP_ICONS_JS__ -->
+<!-- __EP_JS__ -->
 <script>
 'use strict'
 /* ================================================================
@@ -344,6 +212,8 @@ window.__osSetTheme = function (t) { document.documentElement.dataset.osTheme = 
  * ================================================================ */
 const PROXY = 'http://127.0.0.1:17931'
 const { createApp, ref, reactive, computed, onMounted, nextTick, watch, h } = Vue
+const { ElButton, ElInput, ElSelect, ElOption, ElDialog, ElForm, ElFormItem, ElCheckbox, ElProgress, ElEmpty } = ElementPlus
+const EI = window.EP_ICONS || {}
 
 function svgIcon(paths, size = 15) {
   return `<svg viewBox="0 0 24 24" width="${size}" height="${size}" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${paths}</svg>`
@@ -452,9 +322,7 @@ const app = createApp({
       return m
     }
     function toast(msg) {
-      toastText.value = humanizeError(msg)
-      clearTimeout(toastTimer)
-      toastTimer = setTimeout(() => { toastText.value = '' }, 2600)
+      try { ElementPlus.ElMessage({ message: humanizeError(msg), duration: 2800, grouping: true }) } catch (_) { toastText.value = humanizeError(msg) }
     }
     function fmtSize(n) {
       if (n == null) return '-'
@@ -683,16 +551,12 @@ const app = createApp({
     function clearSelection() { selected.value = new Set() }
 
     /* ---------- 通用弹窗 ---------- */
-    function showConfirm(title, text, okText) {
-      confirmModal.title = title; confirmModal.text = text; confirmModal.okText = okText || '确定'; confirmModal.open = true
-      return new Promise((r) => { confirmResolve = r })
+    async function showConfirm(title, text, okText) {
+      try { await ElementPlus.ElMessageBox.confirm(text, title, { confirmButtonText: okText || '确定', cancelButtonText: '取消', type: 'warning' }); return true } catch (_) { return false }
     }
-    function resolveConfirm(v) { confirmModal.open = false; if (confirmResolve) { confirmResolve(v); confirmResolve = null } }
-    function showPrompt(title, value, okText) {
-      promptModal.title = title; promptModal.value = value || ''; promptModal.okText = okText || '确定'; promptModal.open = true
-      return new Promise((r) => { promptResolve = r })
+    async function showPrompt(title, value, okText) {
+      try { const r = await ElementPlus.ElMessageBox.prompt('', title, { confirmButtonText: okText || '确定', cancelButtonText: '取消', inputValue: value || '' }); return r.value } catch (_) { return null }
     }
-    function resolvePrompt(v) { promptModal.open = false; if (promptResolve) { promptResolve(v); promptResolve = null } }
 
     /* ---------- 行操作 ---------- */
     async function deleteEntry(e) {
@@ -747,6 +611,7 @@ const app = createApp({
     const uiTheme = ref('dark')
     async function toggleTheme() {
       uiTheme.value = uiTheme.value === 'dark' ? 'light' : 'dark'
+      document.documentElement.classList.toggle('dark', uiTheme.value === 'dark')
       if (window.__osSetTheme) window.__osSetTheme(uiTheme.value)
       try { await storeBridge.set('ui-theme', uiTheme.value) } catch (_) { /* ignore */ }
     }
@@ -1268,50 +1133,47 @@ const app = createApp({
     })
 
     /* ---------- 渲染（render 函数；宿主 CSP 禁止模板编译） ---------- */
-    const ib = (title, icon, fn) => h('button', { class: 'icon-btn', title, innerHTML: icon, onClick: fn })
+    const ib = (title, icon, fn) => h(ElButton, { text: true, size: 'small', class: 'row-act', title, onClick: fn }, () => h('span', { innerHTML: icon, style: { display: 'inline-flex' } }))
     function renderNoConn() {
       return h('div', { class: 'no-session' }, [
-        h('div', { class: 'big' }, '对象存储'),
-        h('p', { innerHTML: '添加一个存储连接后即可浏览、上传、下载与预览对象。<br>支持阿里云 OSS 与全部 S3 兼容服务（MinIO、AWS S3、R2、COS、OBS、B2 等）。' }),
-        h('p', { style: { marginTop: '14px' } }, [h('button', { class: 'btn', onClick: () => openConnEditor(null) }, '＋ 新建连接')]),
+        h(ElEmpty, { description: '', imageSize: 90 }, {
+          default: () => h('div', [
+            h('div', { style: { fontSize: '15px', fontWeight: 600, marginBottom: '6px' } }, '对象存储'),
+            h('p', { innerHTML: '添加一个存储连接后即可浏览、上传、下载与预览对象。<br>支持阿里云 OSS 与全部 S3 兼容服务（MinIO、AWS S3、R2、COS、OBS、B2 等）。' })
+          ])
+        }),
+        h(ElButton, { type: 'primary', icon: EI.Plus, style: { marginTop: '14px' }, onClick: () => openConnEditor(null) }, () => '新建连接'),
         pageError.value ? h('p', { class: 'err-text', style: { marginTop: '10px' } }, pageError.value) : null
       ])
     }
     function renderConnEditor() {
       const f = editor
-      const text = (label, key, opts = {}) => h('div', { class: 'form-row' }, [
-        h('label', label),
-        h('input', { value: f[key], type: opts.type || 'text', placeholder: opts.ph || '', onInput: (e) => { f[key] = e.target.value } })
-      ])
-      return h('div', { class: 'mask' }, [
-        h('div', { class: 'modal' }, [
-          h('h2', f.id ? '编辑连接' : '新建连接'),
+      const text = (label, key, opts = {}) => h(ElFormItem, { label }, () =>
+        h(ElInput, { modelValue: f[key], 'onUpdate:modelValue': (v) => { f[key] = v }, type: opts.type || 'text', placeholder: opts.ph || '', showPassword: opts.type === 'password' }))
+      return h(ElDialog, { modelValue: editor.open, 'onUpdate:modelValue': (v) => (editor.open = v), title: f.id ? '编辑连接' : '新建连接', width: '520px', closeOnClickModal: false }, {
+        default: () => h(ElForm, { labelWidth: '118px' }, () => [
           text('名称', 'name', { ph: '如：生产 OSS' }),
-          h('div', { class: 'form-row' }, [
-            h('label', '服务商预设'),
-            h('select', { value: f.preset, onChange: (e) => { f.preset = e.target.value; applyPreset() } },
-              Object.entries(PRESETS).map(([k, p]) => h('option', { value: k, key: k }, p.label)))
-          ]),
+          h(ElFormItem, { label: '服务商预设' }, () => h(ElSelect, { modelValue: f.preset, 'onUpdate:modelValue': (v) => { f.preset = v; applyPreset() }, style: { width: '100%' } }, () =>
+            Object.entries(PRESETS).map(([k, p]) => h(ElOption, { label: p.label, value: k })))),
           text('Endpoint', 'endpoint', { ph: 'https://s3.oss-cn-hangzhou.aliyuncs.com' }),
           text('Region', 'region', { ph: 'us-east-1' }),
-          text('默认 Bucket（可选）', 'bucket'),
+          text('默认 Bucket', 'bucket'),
           text('Access Key ID', 'ak'),
-          text('Secret Access Key', 'sk', { type: 'password' }),
-          h('div', { class: 'form-row' }, [
-            h('label', { class: 'check-row' }, [
-              h('input', { type: 'checkbox', checked: f.pathStyle, onChange: (e) => { f.pathStyle = e.target.checked } }),
-              h('span', 'Path-Style 寻址（MinIO / 自建 S3 通常开启；OSS / AWS S3 关闭）')
-            ])
-          ]),
-          f.testMsg ? h('div', { class: f.testOk ? 'ok-text' : 'err-text', style: { marginBottom: '6px' } }, f.testMsg) : null,
-          h('div', { class: 'foot' }, [
-            f.id ? h('button', { class: ['btn', 'danger'], style: { marginRight: 'auto' }, onClick: deleteEditorConn }, '删除连接') : null,
-            h('button', { class: ['btn', 'ghost'], onClick: testEditor, disabled: f.testing }, f.testing ? '测试中…' : '测试连接'),
-            h('button', { class: ['btn', 'ghost'], onClick: () => { editor.open = false } }, '取消'),
-            h('button', { class: 'btn', onClick: saveEditor }, '保存')
-          ])
+          text('Secret Key', 'sk', { type: 'password' }),
+          h(ElFormItem, { label: 'Path-Style' }, () => h(ElCheckbox, { modelValue: f.pathStyle, 'onUpdate:modelValue': (v) => (f.pathStyle = v) }, () =>
+            h('span', { style: { whiteSpace: 'normal', fontSize: '12px', color: 'var(--el-text-color-regular)', lineHeight: '1.5' } }, 'Path-Style 寻址（MinIO / 自建 S3 通常开启；OSS / AWS S3 关闭）'))),
+          h(ElFormItem, { label: ' ' }, () => h('span', { class: 'test-line' }, [
+            h(ElButton, { size: 'small', loading: f.testing, onClick: testEditor }, () => '测试连接'),
+            f.testMsg ? h('span', { class: f.testOk ? 'ok-text' : 'err-text' }, f.testMsg) : null
+          ]))
+        ]),
+        footer: () => h('div', { class: 'dialog-foot' }, [
+          f.id ? h(ElButton, { type: 'danger', plain: true, onClick: deleteEditorConn }, () => '删除') : null,
+          h('span', { class: 'flex-spacer' }),
+          h(ElButton, { onClick: () => (editor.open = false) }, () => '取消'),
+          h(ElButton, { type: 'primary', onClick: saveEditor }, () => '保存')
         ])
-      ])
+      })
     }
     function renderLayout() {
       return h('div', { class: 'layout' }, [
@@ -1319,7 +1181,7 @@ const app = createApp({
           h('div', { class: 'side-box' }, [
             h('div', { class: 'side-head' }, [
               h('span', '存储连接'),
-              h('button', { class: 'icon-btn', title: '新建连接', innerHTML: I.plus, onClick: () => openConnEditor(null) })
+              h(ElButton, { circle: true, size: 'small', icon: EI.Plus, title: '新建连接', onClick: () => openConnEditor(null) })
             ]),
             ...connections.value.map((c) => h('div', {
               class: ['conn-item', { active: c.id === connId.value }], key: c.id,
@@ -1330,13 +1192,13 @@ const app = createApp({
                 h('span', { class: 'conn-name' }, c.name),
                 h('span', { class: 'conn-sub' }, presetLabelOf(c) + ' · ' + hostOf(c.endpoint))
               ]),
-              h('button', { class: 'icon-btn', title: '编辑连接', innerHTML: I.edit, onClick: (e) => { e.stopPropagation(); openConnEditor(c) } })
+              h(ElButton, { text: true, size: 'small', class: 'conn-edit', icon: EI.Edit, title: '编辑连接', onClick: (e) => { e.stopPropagation(); openConnEditor(c) } })
             ]))
           ]),
           h('div', { class: 'side-box' }, [
             h('div', { class: 'side-head' }, [
               h('span', 'Bucket'),
-              h('button', { class: 'icon-btn', title: '列出全部 Bucket', innerHTML: I.refresh, onClick: () => fetchBuckets() })
+              h(ElButton, { circle: true, size: 'small', icon: EI.Refresh, title: '列出全部 Bucket', onClick: () => fetchBuckets() })
             ]),
             buckets.value.length ? null : h('div', { class: 'empty-hint' }, '尚未列出（点右上角刷新）'),
             ...buckets.value.map((b) => h('div', {
@@ -1344,13 +1206,8 @@ const app = createApp({
               onClick: () => openBucket(b)
             }, [h('span', { innerHTML: I.bucket }), h('span', { class: 'grow' }, b)])),
             h('div', { class: 'bucket-join' }, [
-              h('input', {
-                class: 'text-input', style: { flex: 1, minWidth: 0 }, placeholder: '手动输入 bucket',
-                value: bucketInput.value,
-                onInput: (e) => { bucketInput.value = e.target.value },
-                onKeydown: (e) => { if (e.key === 'Enter') openBucket(bucketInput.value.trim()) }
-              }),
-              h('button', { class: ['btn', 'small'], onClick: () => openBucket(bucketInput.value.trim()) }, '打开')
+              h(ElInput, { modelValue: bucketInput.value, 'onUpdate:modelValue': (v) => (bucketInput.value = v), size: 'small', placeholder: '手动输入 bucket', style: { flex: 1, minWidth: 0 }, onKeyup: (e) => { if (e.key === 'Enter') openBucket(bucketInput.value.trim()) } }),
+              h(ElButton, { type: 'primary', size: 'small', onClick: () => openBucket(bucketInput.value.trim()) }, () => '打开')
             ])
           ]),
           h('div', { class: 'side-box' }, [
@@ -1366,29 +1223,24 @@ const app = createApp({
             ])
           ] : [h('span', { class: 'empty-hint' }, '未打开 Bucket')]),
           h('div', { class: 'toolbar' }, [
-            h('button', { class: 'btn', onClick: triggerUpload }, [h('span', { innerHTML: I.upload }), '上传文件']),
+            h(ElButton, { type: 'primary', onClick: triggerUpload }, () => [h('span', { innerHTML: I.upload, class: 'btn-ico' }), '上传文件']),
             h('input', { type: 'file', multiple: true, hidden: true, ref: (el) => { fileInputEl = el }, onChange: onFilesPicked }),
-            h('button', { class: ['btn', 'ghost'], onClick: newFolder }, [h('span', { innerHTML: I.folderPlus }), '新建文件夹']),
-            h('button', { class: ['btn', 'ghost'], onClick: refreshList }, [h('span', { innerHTML: I.refresh }), '刷新']),
+            h(ElButton, { onClick: newFolder }, () => [h('span', { innerHTML: I.folderPlus, class: 'btn-ico' }), '新建文件夹']),
+            h(ElButton, { onClick: refreshList }, () => [h('span', { innerHTML: I.refresh, class: 'btn-ico' }), '刷新']),
             h('span', { style: { flex: 1 } }),
-            h('input', {
-              class: 'text-input', style: { width: '190px' }, placeholder: '按前缀搜索（回车）',
-              value: prefixSearchText.value,
-              onInput: (e) => { prefixSearchText.value = e.target.value },
-              onKeydown: (e) => { if (e.key === 'Enter') doPrefixSearch() }
-            })
+            h(ElInput, { modelValue: prefixSearchText.value, 'onUpdate:modelValue': (v) => (prefixSearchText.value = v), size: 'small', placeholder: '按前缀搜索（回车）', clearable: true, prefixIcon: EI.Search, style: { width: '210px' }, onKeyup: (e) => { if (e.key === 'Enter') doPrefixSearch() } })
           ]),
           selected.value.size ? h('div', { class: ['toolbar', 'batch-bar'] }, [
             h('span', { class: 'sel-info' }, `已选 ${selected.value.size} 个文件`),
-            h('button', { class: ['btn', 'ghost', 'small'], onClick: batchDownload }, '批量下载'),
-            h('button', { class: ['btn', 'ghost', 'small'], onClick: () => openCopyModal('copy') }, '批量复制'),
-            h('button', { class: ['btn', 'ghost', 'small'], onClick: () => openCopyModal('move') }, '批量移动'),
-            h('button', { class: ['btn', 'danger', 'small'], onClick: batchDelete }, '批量删除'),
-            h('button', { class: ['btn', 'ghost', 'small'], onClick: clearSelection }, '取消选择')
+            h(ElButton, { size: 'small', onClick: batchDownload }, () => '批量下载'),
+            h(ElButton, { size: 'small', onClick: () => openCopyModal('copy') }, () => '批量复制'),
+            h(ElButton, { size: 'small', onClick: () => openCopyModal('move') }, () => '批量移动'),
+            h(ElButton, { size: 'small', type: 'danger', plain: true, onClick: batchDelete }, () => '批量删除'),
+            h(ElButton, { size: 'small', text: true, onClick: clearSelection }, () => '取消选择')
           ]) : null,
           h('div', { class: 'list-wrap' }, [
             h('div', { class: 'list-head' }, [
-              h('span', [h('input', { type: 'checkbox', checked: allChecked.value, onChange: toggleAll })]),
+              h('span', [h(ElCheckbox, { modelValue: allChecked.value, indeterminate: selected.value.size > 0 && !allChecked.value, 'onUpdate:modelValue': (v) => toggleAll({ target: { checked: v } }) })]),
               h('span', '名称'), h('span', '大小'), h('span', { class: 'c-date' }, '最后修改'),
               h('span', { style: { textAlign: 'right' } }, '操作')
             ]),
@@ -1404,7 +1256,7 @@ const app = createApp({
             h('div', { class: 'list-foot' }, [
               h('span', listStatus.value),
               h('span', { style: { flex: 1 } }),
-              nextToken.value ? h('button', { class: ['btn', 'ghost', 'small'], onClick: loadMore }, '加载更多') : null
+              nextToken.value ? h(ElButton, { text: true, size: 'small', onClick: loadMore }, () => '加载更多') : null
             ])
           ]),
           h('div', { class: 'tasks' }, [
@@ -1414,7 +1266,7 @@ const app = createApp({
               activeTasks.value ? h('span', { class: 'badge' }, `${activeTasks.value} 进行中`) : null,
               failedTasks.value ? h('span', { class: ['badge', 'err'] }, `${failedTasks.value} 失败`) : null,
               h('span', { style: { flex: 1 } }),
-              h('button', { class: ['btn', 'ghost', 'small'], onClick: (e) => { e.stopPropagation(); clearFinishedTasks() } }, '清除已完成'),
+              h(ElButton, { text: true, size: 'small', onClick: (e) => { e.stopPropagation(); clearFinishedTasks() } }, () => '清除已完成'),
               h('span', tasksOpen.value ? '▾' : '▸')
             ]),
             h('div', { style: { display: tasksOpen.value ? '' : 'none' } },
@@ -1423,11 +1275,11 @@ const app = createApp({
                   h('span', { class: 't-ico', innerHTML: taskIcon(t) }),
                   h('span', { class: 't-name', title: t.key || t.name }, t.name),
                   h('span', { class: ['t-status', t.status] }, taskStatusText(t)),
-                  t.status === 'running' ? h('button', { class: ['btn', 'ghost', 'small'], onClick: () => cancelTask(t) }, '取消') : null,
-                  t.status === 'failed' ? h('button', { class: ['btn', 'small'], onClick: () => retryTask(t) }, '↻ 重试') : null,
-                  t.status !== 'running' ? h('button', { class: ['btn', 'ghost', 'small'], onClick: () => removeTask(t) }, '移除') : null
+                  t.status === 'running' ? h(ElButton, { size: 'small', text: true, onClick: () => cancelTask(t) }, () => '取消') : null,
+                  t.status === 'failed' ? h(ElButton, { size: 'small', type: 'primary', onClick: () => retryTask(t) }, () => '↻ 重试') : null,
+                  t.status !== 'running' ? h(ElButton, { size: 'small', text: true, onClick: () => removeTask(t) }, () => '移除') : null
                 ]),
-                h('div', { class: 'bar' }, [h('i', { class: t.status, style: { width: taskPct(t) + '%' } })])
+                h(ElProgress, { percentage: taskPct(t), status: t.status === 'failed' ? 'exception' : t.status === 'done' ? 'success' : undefined, showText: false, strokeWidth: 5 })
               ])) : [h('div', { style: { padding: '12px', color: 'var(--text-muted)', fontSize: '12px' } }, '暂无传输任务')])
           ])
         ])
@@ -1438,7 +1290,7 @@ const app = createApp({
         class: ['row', { selected: selected.value.has(e.key) }], key: e.key,
         style: { top: e._idx * ROW_H + 'px' }
       }, [
-        h('span', e.isDir ? [] : [h('input', { type: 'checkbox', checked: selected.value.has(e.key), onChange: (ev) => toggleSelect(e, ev) })]),
+        h('span', e.isDir ? [] : [h(ElCheckbox, { modelValue: selected.value.has(e.key), 'onUpdate:modelValue': (v) => toggleSelect(e, { target: { checked: v } }) })]),
         h('span', {
           class: ['name', { dir: e.isDir }],
           onClick: () => { if (e.isDir) gotoPrefix(e.key) },
@@ -1461,39 +1313,28 @@ const app = createApp({
         ])
       ])
     }
-    function maskWrap(onSelfClose, modalChildren, wide) {
-      return h('div', {
-        class: 'mask',
-        onClick: (e) => { if (e.target === e.currentTarget) onSelfClose() }
-      }, [h('div', { class: ['modal', { wide: !!wide }] }, modalChildren)])
-    }
     function renderPresign() {
-      return maskWrap(() => { presign.open = false }, [
-        h('h2', '预签名链接（免登录分享）'),
-        h('div', { class: 'form-row' }, [h('label', '对象'), h('input', { readonly: true, value: presign.key })]),
-        h('div', { class: 'form-row' }, [
-          h('label', '有效期'),
-          h('select', {
-            value: presign.expires,
-            onChange: (e) => { presign.expires = Number(e.target.value); regenPresign() }
-          }, [
-            h('option', { value: 900 }, '15 分钟'),
-            h('option', { value: 3600 }, '1 小时'),
-            h('option', { value: 21600 }, '6 小时'),
-            h('option', { value: 86400 }, '24 小时'),
-            h('option', { value: 604800 }, '7 天（上限）')
-          ])
+      return h(ElDialog, { modelValue: presign.open, 'onUpdate:modelValue': (v) => (presign.open = v), title: '预签名链接（免登录分享）', width: '540px' }, {
+        default: () => h(ElForm, { labelWidth: '64px' }, () => [
+          h(ElFormItem, { label: '对象' }, () => h(ElInput, { modelValue: presign.key, readonly: true })),
+          h(ElFormItem, { label: '有效期' }, () => h(ElSelect, { modelValue: presign.expires, 'onUpdate:modelValue': (v) => { presign.expires = Number(v); regenPresign() }, style: { width: '180px' } }, () => [
+            h(ElOption, { label: '15 分钟', value: 900 }),
+            h(ElOption, { label: '1 小时', value: 3600 }),
+            h(ElOption, { label: '6 小时', value: 21600 }),
+            h(ElOption, { label: '24 小时', value: 86400 }),
+            h(ElOption, { label: '7 天（上限）', value: 604800 })
+          ])),
+          h(ElFormItem, { label: '链接' }, () => h('div', { style: { width: '100%' } }, [
+            h(ElInput, { modelValue: presign.url, readonly: true, ref: (el) => { presignInputEl = el }, onFocus: (e) => e.target.select() }),
+            h('div', { class: 'hint' }, '任何人凭此链接在有效期内可直接下载该对象，无需密钥。请勿公开传播敏感文件链接。')
+          ]))
         ]),
-        h('div', { class: 'form-row' }, [
-          h('label', '链接'),
-          h('input', { readonly: true, value: presign.url, ref: (el) => { presignInputEl = el } }),
-          h('div', { class: 'hint' }, '任何人凭此链接在有效期内可直接下载该对象，无需密钥。请勿公开传播敏感文件链接。')
-        ]),
-        h('div', { class: 'foot' }, [
-          h('button', { class: ['btn', 'ghost'], onClick: () => { presign.open = false } }, '关闭'),
-          h('button', { class: 'btn', onClick: copyPresign }, '复制链接')
+        footer: () => h('div', { class: 'dialog-foot' }, [
+          h('span', { class: 'flex-spacer' }),
+          h(ElButton, { onClick: () => (presign.open = false) }, () => '关闭'),
+          h(ElButton, { type: 'primary', onClick: copyPresign }, () => '复制链接')
         ])
-      ])
+      })
     }
     function renderPreviewBody() {
       if (preview.loading) return h('span', [h('span', { class: 'spin' }, '⏳'), ' 加载中…'])
@@ -1507,101 +1348,65 @@ const app = createApp({
         return h('div', { style: { textAlign: 'center', maxWidth: '520px', width: '100%' } }, [
           h('span', { class: 'file-tile', style: { width: '46px', height: '46px', margin: '0 auto 10px' }, innerHTML: tileIcon(preview.entry) }),
           h('div', { style: { lineHeight: '1.7' } }, `受宿主插件页安全策略限制，${preview.kindName}无法在应用内直接播放/嵌入预览。可用下方 1 小时预签名链接在浏览器中打开，或直接下载。`),
-          h('div', { class: 'form-row', style: { marginTop: '10px' } }, [
-            h('input', { readonly: true, value: preview.url, onClick: (e) => e.target.select() })
+          h('div', { style: { marginTop: '10px', textAlign: 'left' } }, [
+            h(ElInput, { modelValue: preview.url, readonly: true, onFocus: (e) => e.target.select() })
           ]),
-          preview.officeViewer ? h('div', { class: 'form-row', style: { marginTop: '8px' } }, [
-            h('label', 'Office 在线预览地址（复制到浏览器打开）'),
-            h('input', { readonly: true, value: preview.officeViewer, onClick: (e) => e.target.select() })
+          preview.officeViewer ? h('div', { style: { marginTop: '10px', textAlign: 'left' } }, [
+            h('div', { class: 'hint', style: { margin: '0 0 4px' } }, 'Office 在线预览地址（复制到浏览器打开）'),
+            h(ElInput, { modelValue: preview.officeViewer, readonly: true, onFocus: (e) => e.target.select() })
           ]) : null
         ])
       }
       return h('div', { class: 'empty-hint' }, '该类型暂不支持在线预览，请下载后查看。')
     }
     function renderPreview() {
-      return maskWrap(closePreview, [
-        h('h2', '预览 · ' + (preview.entry ? preview.entry.key : '')),
-        h('div', { class: 'preview-body' }, [renderPreviewBody()]),
-        h('div', { class: 'foot' }, [
-          h('button', { class: ['btn', 'ghost'], onClick: () => { if (preview.entry) openPresign(preview.entry.key) } }, '预签名链接'),
-          h('button', { class: ['btn', 'ghost'], onClick: () => { if (preview.entry) addDownloadTask(preview.entry) } }, '下载'),
-          h('button', { class: 'btn', onClick: closePreview }, '关闭')
+      return h(ElDialog, { modelValue: preview.open, 'onUpdate:modelValue': (v) => { if (!v) closePreview() }, title: '预览 · ' + (preview.entry ? preview.entry.key : ''), width: '880px', alignCenter: true }, {
+        default: () => h('div', { class: 'preview-body' }, [renderPreviewBody()]),
+        footer: () => h('div', { class: 'dialog-foot' }, [
+          h('span', { class: 'flex-spacer' }),
+          h(ElButton, { onClick: () => { if (preview.entry) openPresign(preview.entry.key) } }, () => '预签名链接'),
+          h(ElButton, { onClick: () => { if (preview.entry) addDownloadTask(preview.entry) } }, () => '下载'),
+          h(ElButton, { type: 'primary', onClick: closePreview }, () => '关闭')
         ])
-      ], true)
+      })
     }
     function renderCopy() {
-      return maskWrap(() => { copyModal.open = false }, [
-        h('h2', `${copyModal.mode === 'copy' ? '复制' : '移动'} ${copyModal.keys.length} 个文件到`),
-        h('div', { class: 'form-row' }, [
-          h('label', '目标 Bucket'),
-          h('input', { value: copyModal.bucket, onInput: (e) => { copyModal.bucket = e.target.value } })
+      return h(ElDialog, { modelValue: copyModal.open, 'onUpdate:modelValue': (v) => (copyModal.open = v), title: `${copyModal.mode === 'copy' ? '复制' : '移动'} ${copyModal.keys.length} 个文件到`, width: '480px' }, {
+        default: () => h(ElForm, { labelWidth: '110px' }, () => [
+          h(ElFormItem, { label: '目标 Bucket' }, () => h(ElInput, { modelValue: copyModal.bucket, 'onUpdate:modelValue': (v) => (copyModal.bucket = v) })),
+          h(ElFormItem, { label: '目标前缀（目录）' }, () => h(ElInput, { modelValue: copyModal.prefix, 'onUpdate:modelValue': (v) => (copyModal.prefix = v), placeholder: '如 backup/2026/（可空）' }))
         ]),
-        h('div', { class: 'form-row' }, [
-          h('label', '目标前缀（目录）'),
-          h('input', { value: copyModal.prefix, placeholder: '如 backup/2026/（可空）', onInput: (e) => { copyModal.prefix = e.target.value } })
-        ]),
-        h('div', { class: 'foot' }, [
-          h('button', { class: ['btn', 'ghost'], onClick: () => { copyModal.open = false } }, '取消'),
-          h('button', { class: 'btn', onClick: doCopy }, copyModal.mode === 'move' ? '移动' : '复制')
+        footer: () => h('div', { class: 'dialog-foot' }, [
+          h('span', { class: 'flex-spacer' }),
+          h(ElButton, { onClick: () => (copyModal.open = false) }, () => '取消'),
+          h(ElButton, { type: 'primary', onClick: doCopy }, () => (copyModal.mode === 'move' ? '移动' : '复制'))
         ])
-      ])
-    }
-    function renderConfirm() {
-      return h('div', { class: 'mask' }, [
-        h('div', { class: 'modal', style: { width: '420px' } }, [
-          h('h2', confirmModal.title),
-          h('div', { style: { lineHeight: '1.65', whiteSpace: 'pre-wrap' } }, confirmModal.text),
-          h('div', { class: 'foot' }, [
-            h('button', { class: ['btn', 'ghost'], onClick: () => resolveConfirm(false) }, '取消'),
-            h('button', { class: ['btn', 'danger'], onClick: () => resolveConfirm(true) }, confirmModal.okText)
-          ])
-        ])
-      ])
-    }
-    function renderPrompt() {
-      return h('div', { class: 'mask' }, [
-        h('div', { class: 'modal', style: { width: '420px' } }, [
-          h('h2', promptModal.title),
-          h('div', { class: 'form-row' }, [
-            h('input', {
-              value: promptModal.value,
-              onInput: (e) => { promptModal.value = e.target.value },
-              onKeydown: (e) => { if (e.key === 'Enter') resolvePrompt(promptModal.value) }
-            })
-          ]),
-          h('div', { class: 'foot' }, [
-            h('button', { class: ['btn', 'ghost'], onClick: () => resolvePrompt(null) }, '取消'),
-            h('button', { class: 'btn', onClick: () => resolvePrompt(promptModal.value) }, promptModal.okText)
-          ])
-        ])
-      ])
+      })
     }
     function renderRoot() {
-      return h('div', [
-        h('div', { class: 'topbar' }, [
+      return h('div', { class: 'app-root' }, [
+        h('header', { class: 'topbar' }, [
           h('span', { class: 'logo', innerHTML: I.database }),
-          h('div', [
+          h('div', { class: 'title-block' }, [
             h('h1', '对象存储'),
-            h('div', { class: 'sub' }, 'OSS / S3 兼容服务通用浏览器 · 协议由主进程代理执行')
+            h('span', { class: 'sub' }, 'OSS / S3 兼容服务通用浏览器 · 协议由主进程代理执行')
           ]),
-          h('span', { class: 'spacer' }),
-          h('button', { class: ['btn', 'ghost'], onClick: toggleTheme }, uiTheme.value === 'dark' ? '切换浅色' : '切换深色'),
-          h('button', { class: ['btn', 'ghost'], onClick: scrollToTasks }, '传输任务' + (tasks.value.length ? ` (${tasks.value.length})` : ''))
+          h('span', { class: 'flex-spacer' }),
+          h(ElButton, { text: true, onClick: scrollToTasks }, () => '传输任务' + (tasks.value.length ? ` (${tasks.value.length})` : '')),
+          h(ElButton, { text: true, icon: uiTheme.value === 'dark' ? EI.Sunny : EI.Moon, onClick: toggleTheme }, () => (uiTheme.value === 'dark' ? '切换浅色' : '切换深色'))
         ]),
-        connections.value.length ? renderLayout() : renderNoConn(),
+        h('div', { class: 'os-content' }, [connections.value.length ? renderLayout() : renderNoConn()]),
         editor.open ? renderConnEditor() : null,
         presign.open ? renderPresign() : null,
         preview.open ? renderPreview() : null,
-        copyModal.open ? renderCopy() : null,
-        confirmModal.open ? renderConfirm() : null,
-        promptModal.open ? renderPrompt() : null,
-        h('div', { class: ['toast', { show: !!toastText.value }] }, toastText.value)
+        copyModal.open ? renderCopy() : null
       ])
     }
 
     return renderRoot
   }
 })
+app.use(ElementPlus)
 app.mount('#app')
 </script>
 </body>

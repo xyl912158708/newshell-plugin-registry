@@ -52,12 +52,11 @@ const nameOf = (table, v) => (table.find(([x]) => x === v) || [v, String(v)])[1]
 const App = {
   setup() {
     const uiTheme = ref('dark')
-    const toastText = ref(''); const toastShow = ref(false)
-    let toastTimer = null
-    toastFn = (msg) => { toastText.value = msg; toastShow.value = true; clearTimeout(toastTimer); toastTimer = setTimeout(() => { toastShow.value = false }, 2800) }
+    toastFn = (msg) => { try { ElementPlus.ElMessage({ message: msg, duration: 2600, grouping: true }) } catch (_) {} }
     function resize() { nextTick(() => { const el = document.getElementById('app'); parent.postMessage({ type: 'newshell:resize', height: el ? el.scrollHeight : document.body.scrollHeight }, '*') }) }
     async function toggleTheme() {
       uiTheme.value = uiTheme.value === 'dark' ? 'light' : 'dark'
+      document.documentElement.classList.toggle('dark', uiTheme.value === 'dark')
       if (window.__osSetTheme) window.__osSetTheme(uiTheme.value)
       try { await storeBridge.set('ui-theme', uiTheme.value) } catch (_) {}
     }
@@ -136,10 +135,9 @@ const App = {
       await persistConns()
       editor.open = false
     }
-    const confirmModal = reactive({ open: false, title: '', text: '', okText: '确定' })
-    let confirmResolve = null
-    function showConfirm(title, text, okText) { confirmModal.title = title; confirmModal.text = text; confirmModal.okText = okText || '确定'; confirmModal.open = true; return new Promise((r) => { confirmResolve = r }) }
-    function resolveConfirm(v) { confirmModal.open = false; if (confirmResolve) { confirmResolve(v); confirmResolve = null } }
+    async function showConfirm(title, text, okText) {
+      try { await ElementPlus.ElMessageBox.confirm(text, title, { confirmButtonText: okText || '确定', cancelButtonText: '取消', type: 'warning' }); return true } catch (_) { return false }
+    }
 
     /* ---------- 集群 ---------- */
     const tab = ref('cluster')
@@ -250,10 +248,9 @@ const App = {
       if (!(await showConfirm('重置 Offset', '消费组 ' + grp.detail.id + '\n' + row.topic + ' / 分区 ' + row.partition + '：已提交 Offset ' + (row.committed ?? '无') + ' → ' + newOffset + '\n\n注意：组内有活跃成员时提交可能被拒绝或被覆盖。', '重置'))) return
       try { await kcall('commitOffset', { group: grp.detail.id, topic: row.topic, partition: row.partition, offset: newOffset }); toast('已重置'); openGroup(grp.detail) } catch (e) { toast('重置失败：' + e.message) }
     }
-    const promptModal = reactive({ open: false, title: '', text: '', value: '', okText: '确定' })
-    let promptResolve = null
-    function showPrompt(title, text, value, okText) { promptModal.title = title; promptModal.text = text; promptModal.value = value || ''; promptModal.okText = okText || '确定'; promptModal.open = true; return new Promise((r) => { promptResolve = r }) }
-    function resolvePrompt(v) { promptModal.open = false; if (promptResolve) { promptResolve(v ? promptModal.value : null); promptResolve = null } }
+    async function showPrompt(title, text, value, okText) {
+      try { const r = await ElementPlus.ElMessageBox.prompt(text, title, { confirmButtonText: okText || '确定', cancelButtonText: '取消', inputValue: value || '', inputType: 'number' }); return r.value } catch (_) { return null }
+    }
 
     /* ---------- ACL ---------- */
     const acl = reactive({ list: [], loading: false, filterType: 'all', create: { resourceType: 2, resourceName: '', patternType: 3, principal: '', host: '*', operation: 3, permissionType: 3 }, creating: false })
@@ -320,225 +317,279 @@ const App = {
     })
     onUnmounted(() => stopStream())
 
-    /* ---------- 渲染辅助 ---------- */
-    function simpleTable(headers, rows) {
-      return h('table', { class: 'kv-table' }, [
-        h('thead', [h('tr', headers.map((x) => h('th', x)))]),
-        h('tbody', rows.map((cells) => h('tr', cells.map((c) => h('td', c === null || c === undefined ? '-' : c)))))
-      ])
+    /* ================= 渲染层（Element Plus） ================= */
+    const { ElButton, ElInput, ElInputNumber, ElSelect, ElOption, ElDialog, ElForm, ElFormItem, ElSwitch, ElTabs, ElTabPane, ElTag, ElTable, ElTableColumn, ElScrollbar, ElEmpty } = ElementPlus
+    const I = window.EP_ICONS || {}
+    const loadingDir = Vue.resolveDirective ? Vue.resolveDirective('loading') : null
+    function WL(vnode, on) { return loadingDir ? Vue.withDirectives(vnode, [[loadingDir, !!on]]) : vnode }
+    function emptyPane(big, sub) { return h(ElEmpty, { description: sub ? big + ' · ' + sub : big, imageSize: 72, class: 'pane-empty' }) }
+    function ctl(label, control, width) {
+      return h('div', { class: 'ctl', style: width ? { width } : null }, [h('span', { class: 'ctl-label' }, label), control])
+    }
+    function epTable(cols, rows, extra) {
+      return h(ElTable, Object.assign({ data: rows, size: 'small', style: { width: '100%' } }, extra || {}), () =>
+        cols.map((c) => h(ElTableColumn, { label: c.label, width: c.width, minWidth: c.minWidth }, c.cell ? { default: ({ row }) => c.cell(row) } : undefined)))
     }
 
     function renderCluster() {
-      if (!session.id) return h('div', { class: 'list-empty' }, [h('div', { class: 'big' }, '尚未连接集群'), h('div', '在左侧选择连接后点「连接」，即可巡检 Broker、Topic 与分区偏移')])
+      if (!session.id) return emptyPane('尚未连接集群', '在左侧选择连接后点「连接」，即可巡检 Broker、Topic 与分区偏移')
       return h('div', [
-        h('div', { style: { display: 'flex', alignItems: 'center', marginBottom: '8px' } }, [h('span', { class: 'io-label', style: { margin: 0 } }, 'Broker（' + cluster.brokers.length + '）'), h('span', { style: { flex: 1 } }), h('button', { class: ['btn', 'ghost', 'small'], disabled: cluster.loading, onClick: loadCluster }, cluster.loading ? '刷新中…' : '刷新')]),
-        simpleTable(['ID', '地址', 'Rack', '角色'], cluster.brokers.map((b) => [String(b.id), b.host + ':' + b.port, b.rack || '-', b.id === cluster.controllerId ? 'Controller' : 'Broker'])),
-        h('div', { class: 'io-label', style: { marginTop: '14px' } }, 'Topic（' + cluster.topics.length + '）'),
-        cluster.topics.length ? h('table', { class: 'kv-table' }, [
-          h('tr', [h('th', 'Topic'), h('th', '分区数'), h('th', '消息总量（估算）'), h('th', '')]),
-          ...cluster.topics.map((t) => h('tr', { class: 'clickable', onClick: () => loadTopicParts(t.name) }, [h('td', { class: 'mono' }, t.name), h('td', String(t.partitions)), h('td', String(t.messages)), h('td', cluster.selTopic === t.name ? '已展开' : '查看分区 →')]))
-        ]) : h('div', { style: { color: 'var(--text-secondary)' } }, '暂无 Topic'),
+        h('div', { class: 'tab-toolbar' }, [
+          h('span', { class: 'block-label-inline' }, 'Broker（' + cluster.brokers.length + '）'),
+          h('span', { class: 'flex-spacer' }),
+          h(ElButton, { size: 'small', icon: I.Refresh, loading: cluster.loading, onClick: loadCluster }, () => '刷新')
+        ]),
+        epTable([
+          { label: 'ID', width: 70, cell: (b) => String(b.id) },
+          { label: '地址', minWidth: 180, cell: (b) => h('span', { class: 'mono' }, b.host + ':' + b.port) },
+          { label: 'Rack', width: 120, cell: (b) => b.rack || '-' },
+          { label: '角色', width: 120, cell: (b) => h(ElTag, { size: 'small', effect: 'light', round: true, type: b.id === cluster.controllerId ? 'primary' : 'info' }, () => (b.id === cluster.controllerId ? 'Controller' : 'Broker')) }
+        ], cluster.brokers),
+        h('div', { class: 'block-label' }, 'Topic（' + cluster.topics.length + '）'),
+        cluster.topics.length ? epTable([
+          { label: 'Topic', minWidth: 200, cell: (t) => h('span', { class: 'mono' }, t.name) },
+          { label: '分区数', width: 90, cell: (t) => String(t.partitions) },
+          { label: '消息总量（估算）', width: 140, cell: (t) => String(t.messages) },
+          { label: '', width: 110, cell: (t) => h('span', { class: 'link-text' }, cluster.selTopic === t.name ? '已展开' : '查看分区 →') }
+        ], cluster.topics, { onRowClick: (row) => loadTopicParts(row.name), rowStyle: { cursor: 'pointer' } }) : h('div', { class: 'empty-line' }, '暂无 Topic'),
         cluster.selTopic ? h('div', [
-          h('div', { class: 'io-label', style: { marginTop: '14px' } }, '分区 · ' + cluster.selTopic),
-          cluster.partsLoading ? h('div', '加载中…') : simpleTable(['分区', 'Leader', '副本', 'ISR', '最早 Offset', '最新 Offset', '消息数'], cluster.partitions.map((p) => [String(p.partition), String(p.leader), (p.replicas || []).join(','), (p.isr || []).join(','), String(p.earliest), String(p.latest), String(Math.max(0, p.latest - p.earliest))]))
+          h('div', { class: 'block-label' }, '分区 · ' + cluster.selTopic),
+          cluster.partsLoading ? h('div', { class: 'empty-line' }, '加载中…') : epTable([
+            { label: '分区', width: 70, cell: (p) => String(p.partition) },
+            { label: 'Leader', width: 80, cell: (p) => String(p.leader) },
+            { label: '副本', width: 110, cell: (p) => (p.replicas || []).join(',') },
+            { label: 'ISR', width: 110, cell: (p) => (p.isr || []).join(',') },
+            { label: '最早 Offset', width: 110, cell: (p) => String(p.earliest) },
+            { label: '最新 Offset', width: 110, cell: (p) => String(p.latest) },
+            { label: '消息数', width: 90, cell: (p) => String(Math.max(0, p.latest - p.earliest)) }
+          ], cluster.partitions)
         ]) : null
       ])
     }
 
     function renderMessages() {
-      if (!session.id) return h('div', { class: 'list-empty' }, [h('div', { class: 'big' }, '尚未连接集群')])
-      const topicOptions = cluster.topics.map((t) => t.name)
+      if (!session.id) return emptyPane('尚未连接集群')
       return h('div', [
-        h('div', { style: { display: 'flex', gap: '8px', flexWrap: 'wrap', alignItems: 'flex-end', marginBottom: '10px' } }, [
-          h('div', { class: 'form-row', style: { marginBottom: 0 } }, [h('label', 'Topic'), h('select', { value: msg.topic, style: { height: '32px', width: 'auto', marginBottom: 0 }, onChange: (e) => { msg.topic = e.target.value; msgLoadParts() } }, [h('option', { value: '' }, '选择 Topic'), ...topicOptions.map((t) => h('option', { value: t }, t))])]),
-          h('div', { class: 'form-row', style: { marginBottom: 0 } }, [h('label', '分区'), h('select', { value: String(msg.partition), style: { height: '32px', width: 'auto', marginBottom: 0 }, onChange: (e) => { msg.partition = Number(e.target.value) } }, msg.parts.map((p) => h('option', { value: String(p.partition) }, '分区 ' + p.partition + '（' + Math.max(0, p.latest - p.earliest) + ' 条）')))]),
-          h('div', { class: 'form-row', style: { marginBottom: 0 } }, [h('label', '起点'), h('select', { value: msg.mode, style: { height: '32px', width: 'auto', marginBottom: 0 }, onChange: (e) => { msg.mode = e.target.value } }, [h('option', { value: 'latest' }, '最新 N 条'), h('option', { value: 'earliest' }, '从最早'), h('option', { value: 'offset' }, '指定 Offset')])]),
-          msg.mode === 'latest' ? h('div', { class: 'form-row', style: { marginBottom: 0 } }, [h('label', '条数'), h('input', { value: msg.count, type: 'number', min: 1, max: 500, style: { height: '32px', width: '76px', marginBottom: 0 }, onInput: (e) => { msg.count = e.target.value } })]) : null,
-          msg.mode === 'offset' ? h('div', { class: 'form-row', style: { marginBottom: 0 } }, [h('label', 'Offset'), h('input', { value: msg.offset, type: 'number', min: 0, style: { height: '32px', width: '110px', marginBottom: 0 }, onInput: (e) => { msg.offset = e.target.value } })]) : null,
-          h('div', { class: 'form-row', style: { marginBottom: 0 } }, [h('label', '解码'), h('select', { value: msg.decode, style: { height: '32px', width: 'auto', marginBottom: 0 }, onChange: (e) => { msg.decode = e.target.value } }, [h('option', { value: 'text' }, '文本 UTF-8'), h('option', { value: 'json' }, 'JSON 美化'), h('option', { value: 'hex' }, 'Hex'), h('option', { value: 'base64' }, 'Base64')])]),
-          h('button', { class: 'btn', disabled: msg.loading, onClick: msgFetch }, msg.loading ? '拉取中…' : '拉取'),
-          msg.streaming ? h('button', { class: ['btn', 'danger'], onClick: stopStream }, '停止流式') : h('button', { class: ['btn', 'ghost'], onClick: startStream }, '流式消费'),
-          msg.streaming ? h('span', { class: 'badge warn' }, '流式中 · 下一 Offset ' + msg.nextOffset) : null
+        h('div', { class: 'msg-controls' }, [
+          ctl('Topic', h(ElSelect, { modelValue: msg.topic, 'onUpdate:modelValue': (v) => { msg.topic = v; msgLoadParts() }, placeholder: '选择 Topic', style: { width: '190px' }, size: 'small' }, () =>
+            cluster.topics.map((t) => h(ElOption, { label: t.name, value: t.name })))),
+          ctl('分区', h(ElSelect, { modelValue: msg.partition, 'onUpdate:modelValue': (v) => (msg.partition = Number(v)), style: { width: '150px' }, size: 'small' }, () =>
+            msg.parts.map((p) => h(ElOption, { label: '分区 ' + p.partition + '（' + Math.max(0, p.latest - p.earliest) + ' 条）', value: p.partition })))),
+          ctl('起点', h(ElSelect, { modelValue: msg.mode, 'onUpdate:modelValue': (v) => (msg.mode = v), style: { width: '120px' }, size: 'small' }, () => [
+            h(ElOption, { label: '最新 N 条', value: 'latest' }), h(ElOption, { label: '从最早', value: 'earliest' }), h(ElOption, { label: '指定 Offset', value: 'offset' })
+          ])),
+          msg.mode === 'latest' ? ctl('条数', h(ElInputNumber, { modelValue: Number(msg.count) || 50, 'onUpdate:modelValue': (v) => (msg.count = v), min: 1, max: 500, controls: false, style: { width: '76px' }, size: 'small' })) : null,
+          msg.mode === 'offset' ? ctl('Offset', h(ElInputNumber, { modelValue: Number(msg.offset) || 0, 'onUpdate:modelValue': (v) => (msg.offset = v), min: 0, controls: false, style: { width: '110px' }, size: 'small' })) : null,
+          ctl('解码', h(ElSelect, { modelValue: msg.decode, 'onUpdate:modelValue': (v) => (msg.decode = v), style: { width: '120px' }, size: 'small' }, () => [
+            h(ElOption, { label: '文本 UTF-8', value: 'text' }), h(ElOption, { label: 'JSON 美化', value: 'json' }), h(ElOption, { label: 'Hex', value: 'hex' }), h(ElOption, { label: 'Base64', value: 'base64' })
+          ])),
+          h(ElButton, { type: 'primary', size: 'small', loading: msg.loading, onClick: msgFetch }, () => '拉取'),
+          msg.streaming
+            ? h(ElButton, { type: 'danger', size: 'small', onClick: stopStream }, () => '停止流式')
+            : h(ElButton, { size: 'small', onClick: startStream }, () => '流式消费'),
+          msg.streaming ? h(ElTag, { type: 'warning', effect: 'light', round: true, size: 'small' }, () => '流式中 · 下一 Offset ' + msg.nextOffset) : null
         ]),
-        h('div', { style: { display: 'flex', gap: '8px', flexWrap: 'wrap', marginBottom: '10px' } }, [
-          h('input', { value: msg.fKey, placeholder: '按 Key 过滤（包含）…', style: { height: '30px', width: '200px', marginBottom: 0, fontSize: '12.5px' }, onInput: (e) => { msg.fKey = e.target.value } }),
-          h('input', { value: msg.fVal, placeholder: '按 Value 过滤（包含）…', style: { height: '30px', width: '240px', marginBottom: 0, fontSize: '12.5px' }, onInput: (e) => { msg.fVal = e.target.value } }),
-          h('span', { style: { fontSize: '12px', color: 'var(--text-secondary)', alignSelf: 'center' } }, '共 ' + msg.records.length + ' 条' + (msg.hw ? ' · 高水位 ' + msg.hw : '') + '（过滤在拉取后点「拉取」生效，流式实时生效）')
+        h('div', { class: 'msg-filters' }, [
+          h(ElInput, { modelValue: msg.fKey, 'onUpdate:modelValue': (v) => (msg.fKey = v), size: 'small', placeholder: '按 Key 过滤（包含）…', clearable: true, style: { width: '200px' } }),
+          h(ElInput, { modelValue: msg.fVal, 'onUpdate:modelValue': (v) => (msg.fVal = v), size: 'small', placeholder: '按 Value 过滤（包含）…', clearable: true, style: { width: '240px' } }),
+          h('span', { class: 'toolbar-hint' }, '共 ' + msg.records.length + ' 条' + (msg.hw ? ' · 高水位 ' + msg.hw : '') + '（过滤在拉取后点「拉取」生效，流式实时生效）')
         ]),
         msg.records.length ? h('div', msg.records.map((rec, i) => {
-          if (rec.placeholder) return h('div', { class: 'rec-item' }, [h('div', { class: 'rec-head' }, [h('span', { class: 'badge warn' }, '压缩批次'), h('span', rec.note + '（起始 Offset ' + rec.baseOffset + '，约 ' + rec.count + ' 条）')])])
+          if (rec.placeholder) return h('div', { class: 'rec-item' }, [h('div', { class: 'rec-head static' }, [h(ElTag, { type: 'warning', size: 'small', effect: 'light', round: true }, () => '压缩批次'), h('span', rec.note + '（起始 Offset ' + rec.baseOffset + '，约 ' + rec.count + ' 条）')])])
           const expanded = msg.expanded === i
           return h('div', { class: 'rec-item' }, [
-            h('div', { class: 'rec-head', onClick: () => { msg.expanded = expanded ? -1 : i; resize() } }, [
-              h('span', { class: 'mono' }, '#' + rec.offset),
-              h('span', { style: { color: 'var(--text-secondary)' } }, fmtTime(rec.timestamp)),
-              h('span', { class: 'mono', style: { flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' } }, 'key: ' + decodeBytes(rec.key, 'text').slice(0, 60) + ' · ' + decodeBytes(rec.value, msg.decode === 'json' ? 'text' : msg.decode).replace(/\s+/g, ' ').slice(0, 90))
+            h('div', { class: 'rec-head', onClick: () => { msg.expanded = expanded ? -1 : i } }, [
+              h('span', { class: 'mono rec-offset' }, '#' + rec.offset),
+              h('span', { class: 'muted' }, fmtTime(rec.timestamp)),
+              h('span', { class: 'mono rec-preview' }, 'key: ' + decodeBytes(rec.key, 'text').slice(0, 60) + ' · ' + decodeBytes(rec.value, msg.decode === 'json' ? 'text' : msg.decode).replace(/\s+/g, ' ').slice(0, 90)),
+              h('span', { class: 'rec-caret' }, expanded ? '▾' : '▸')
             ]),
             expanded ? h('div', { class: 'rec-body' }, [
-              h('div', { class: 'io-label' }, 'Key'), h('pre', decodeBytes(rec.key, msg.decode)),
-              h('div', { class: 'io-label' }, 'Value'), h('pre', decodeBytes(rec.value, msg.decode)),
-              rec.headers && rec.headers.length ? h('div', [h('div', { class: 'io-label' }, 'Headers'), ...rec.headers.map((hh) => h('div', { class: 'mono', style: { fontSize: '12px' } }, hh.key + ': ' + decodeBytes(hh.value, 'text')))]) : null
+              h('div', { class: 'block-label' }, 'Key'), h('pre', { class: 'rec-pre' }, decodeBytes(rec.key, msg.decode)),
+              h('div', { class: 'block-label' }, 'Value'), h('pre', { class: 'rec-pre' }, decodeBytes(rec.value, msg.decode)),
+              rec.headers && rec.headers.length ? h('div', [h('div', { class: 'block-label' }, 'Headers'), ...rec.headers.map((hh) => h('div', { class: 'mono', style: { fontSize: '12px' } }, hh.key + ': ' + decodeBytes(hh.value, 'text')))]) : null
             ]) : null
           ])
-        })) : h('div', { style: { color: 'var(--text-secondary)', padding: '8px 0' } }, '选择 Topic 与分区后点「拉取」，或直接开启流式消费')
+        })) : h('div', { class: 'empty-line' }, '选择 Topic 与分区后点「拉取」，或直接开启流式消费')
       ])
     }
 
     function renderGroups() {
-      if (!session.id) return h('div', { class: 'list-empty' }, [h('div', { class: 'big' }, '尚未连接集群')])
+      if (!session.id) return emptyPane('尚未连接集群')
       if (grp.detail) {
         const g = grp.detail
         return h('div', [
-          h('div', { style: { display: 'flex', gap: '8px', alignItems: 'center', marginBottom: '8px' } }, [
-            h('button', { class: ['btn', 'ghost', 'small'], onClick: () => { grp.detail = null; resize() } }, '← 返回列表'),
-            h('span', { style: { fontWeight: 650 } }, g.id),
-            h('span', { class: 'badge' }, g.state),
-            h('span', { style: { color: 'var(--text-secondary)', fontSize: '12px' } }, '协议 ' + (g.protocol || '-') + ' · 成员 ' + g.members.length)
+          h('div', { class: 'detail-head' }, [
+            h(ElButton, { text: true, size: 'small', icon: I.ArrowLeft, onClick: () => { grp.detail = null } }, () => '返回列表'),
+            h('span', { class: 'detail-title mono' }, g.id),
+            h(ElTag, { size: 'small', effect: 'light', round: true }, () => g.state),
+            h('span', { class: 'muted', style: { fontSize: '12px' } }, '协议 ' + (g.protocol || '-') + ' · 成员 ' + g.members.length)
           ]),
-          g.members.length ? h('div', [h('div', { class: 'io-label' }, '成员'), simpleTable(['Member ID', 'Client ID', '主机', '订阅'], g.members.map((m) => [m.id, m.clientId, m.host, m.assignment.map((a) => a.name + '[' + a.partitions.join(',') + ']').join(' ')]))]) : null,
-          h('div', { class: 'io-label', style: { marginTop: '12px' } }, 'Offset 与 Lag'),
-          grp.offsets.length ? h('table', { class: 'kv-table' }, [
-            h('tr', [h('th', 'Topic'), h('th', '分区'), h('th', '已提交'), h('th', '最新'), h('th', 'Lag'), h('th', '重置为')]),
-            ...grp.offsets.map((o) => h('tr', [
-              h('td', { class: 'mono' }, o.topic), h('td', String(o.partition)), h('td', o.committed === null ? '无' : String(o.committed)), h('td', o.latest === null ? '-' : String(o.latest)),
-              h('td', o.lag === null ? '-' : h('span', { class: ['badge', { warn: o.lag > 0 }] }, String(o.lag))),
-              h('td', h('span', { style: { display: 'flex', gap: '5px' } }, [
-                h('button', { class: ['btn', 'ghost', 'small'], onClick: () => resetOffset(o, 'earliest') }, '最早'),
-                h('button', { class: ['btn', 'ghost', 'small'], onClick: () => resetOffset(o, 'latest') }, '最新'),
-                h('button', { class: ['btn', 'ghost', 'small'], onClick: () => resetOffset(o, 'custom') }, '指定…')
-              ]))
-            ]))
-          ]) : h('div', { style: { color: 'var(--text-secondary)' } }, '该组暂无 Offset 记录')
+          g.members.length ? h('div', [h('div', { class: 'block-label' }, '成员'), epTable([
+            { label: 'Member ID', minWidth: 180, cell: (m) => h('span', { class: 'mono' }, m.id) },
+            { label: 'Client ID', width: 160, cell: (m) => m.clientId },
+            { label: '主机', width: 140, cell: (m) => m.host },
+            { label: '订阅', minWidth: 180, cell: (m) => m.assignment.map((a) => a.name + '[' + a.partitions.join(',') + ']').join(' ') }
+          ], g.members)]) : null,
+          h('div', { class: 'block-label' }, 'Offset 与 Lag'),
+          grp.offsets.length ? epTable([
+            { label: 'Topic', minWidth: 150, cell: (o) => h('span', { class: 'mono' }, o.topic) },
+            { label: '分区', width: 70, cell: (o) => String(o.partition) },
+            { label: '已提交', width: 100, cell: (o) => (o.committed === null ? '无' : String(o.committed)) },
+            { label: '最新', width: 90, cell: (o) => (o.latest === null ? '-' : String(o.latest)) },
+            { label: 'Lag', width: 90, cell: (o) => (o.lag === null ? '-' : h(ElTag, { size: 'small', effect: 'light', round: true, type: o.lag > 0 ? 'warning' : 'success' }, () => String(o.lag))) },
+            { label: '重置为', width: 190, cell: (o) => h('span', { class: 'btn-row' }, [
+              h(ElButton, { size: 'small', text: true, onClick: () => resetOffset(o, 'earliest') }, () => '最早'),
+              h(ElButton, { size: 'small', text: true, onClick: () => resetOffset(o, 'latest') }, () => '最新'),
+              h(ElButton, { size: 'small', text: true, onClick: () => resetOffset(o, 'custom') }, () => '指定…')
+            ]) }
+          ], grp.offsets) : h('div', { class: 'empty-line' }, '该组暂无 Offset 记录')
         ])
       }
       return h('div', [
-        h('div', { style: { display: 'flex', marginBottom: '8px' } }, [h('span', { class: 'io-label', style: { margin: 0 } }, '消费组（' + grp.list.length + '）'), h('span', { style: { flex: 1 } }), h('button', { class: ['btn', 'ghost', 'small'], disabled: grp.loading, onClick: loadGroups }, '刷新')]),
-        grp.loading && !grp.list.length ? h('div', '加载中…') : grp.list.length ? h('div', grp.list.map((g) => h('div', { class: 'gl-item', style: { display: 'flex', gap: '10px', padding: '9px 4px', borderBottom: '1px solid color-mix(in srgb, var(--border-color) 40%, transparent)', cursor: 'pointer' }, onClick: () => openGroup(g) }, [
+        h('div', { class: 'tab-toolbar' }, [
+          h('span', { class: 'block-label-inline' }, '消费组（' + grp.list.length + '）'),
+          h('span', { class: 'flex-spacer' }),
+          h(ElButton, { size: 'small', icon: I.Refresh, loading: grp.loading, onClick: loadGroups }, () => '刷新')
+        ]),
+        WL(h('div', grp.list.length ? h('div', { class: 'row-list' }, grp.list.map((g) => h('div', { class: 'row-item', onClick: () => openGroup(g) }, [
           h('span', { class: 'mono', style: { fontWeight: 550 } }, g.id),
-          h('span', { style: { color: 'var(--text-secondary)', fontSize: '12px' } }, g.protocolType),
-          h('span', { style: { flex: 1 } }),
-          h('span', { style: { color: 'var(--text-secondary)', fontSize: '12px' } }, '查看 Lag →')
-        ]))) : h('div', { class: 'list-empty' }, '暂无消费组')
+          h('span', { class: 'muted', style: { fontSize: '12px' } }, g.protocolType),
+          h('span', { class: 'flex-spacer' }),
+          h('span', { class: 'link-text' }, '查看 Lag →')
+        ]))) : h('div', { class: 'empty-line' }, '暂无消费组')), grp.loading && !grp.list.length)
       ])
     }
 
     function renderAcl() {
-      if (!session.id) return h('div', { class: 'list-empty' }, [h('div', { class: 'big' }, '尚未连接集群')])
+      if (!session.id) return emptyPane('尚未连接集群')
       const filtered = acl.list.filter((a) => acl.filterType === 'all' || String(a.resourceType) === acl.filterType)
+      const selOf = (model, set, options, width) => h(ElSelect, { modelValue: model, 'onUpdate:modelValue': set, size: 'small', style: { width: width || '130px' } }, () =>
+        options.map(([v, t]) => h(ElOption, { label: t, value: String(v) })))
       return h('div', [
-        h('div', { style: { display: 'flex', alignItems: 'center', marginBottom: '8px' } }, [
-          h('span', { class: 'io-label', style: { margin: 0 } }, 'ACL 规则（' + filtered.length + '）'),
-          h('span', { style: { flex: 1 } }),
-          h('select', { value: acl.filterType, style: { height: '30px', width: 'auto', marginBottom: 0, fontSize: '12.5px' }, onChange: (e) => { acl.filterType = e.target.value } }, [h('option', { value: 'all' }, '全部资源类型'), ...RES_TYPES.slice(2).map(([v, t]) => h('option', { value: String(v) }, t))]),
-          h('button', { class: ['btn', 'ghost', 'small'], disabled: acl.loading, onClick: loadAcls }, '刷新'),
-          h('button', { class: ['btn', 'small'], onClick: () => { acl.creating = !acl.creating; resize() } }, '新建 ACL')
+        h('div', { class: 'tab-toolbar' }, [
+          h('span', { class: 'block-label-inline' }, 'ACL 规则（' + filtered.length + '）'),
+          h('span', { class: 'flex-spacer' }),
+          selOf(acl.filterType, (v) => (acl.filterType = v), [['all', '全部资源类型'], ...RES_TYPES.slice(2)], '140px'),
+          h(ElButton, { size: 'small', icon: I.Refresh, loading: acl.loading, onClick: loadAcls }, () => '刷新'),
+          h(ElButton, { type: 'primary', size: 'small', icon: I.Plus, onClick: () => { acl.creating = !acl.creating } }, () => '新建 ACL')
         ]),
-        acl.creating ? h('div', { style: { display: 'flex', gap: '8px', flexWrap: 'wrap', alignItems: 'flex-end', marginBottom: '12px', padding: '10px', border: '1px solid color-mix(in srgb, var(--border-color) 50%, transparent)', borderRadius: '8px' } }, [
-          h('div', { class: 'form-row', style: { marginBottom: 0 } }, [h('label', '资源类型'), h('select', { value: String(acl.create.resourceType), style: { height: '32px', marginBottom: 0 }, onChange: (e) => { acl.create.resourceType = e.target.value } }, RES_TYPES.slice(2).map(([v, t]) => h('option', { value: String(v) }, t)))]),
-          h('div', { class: 'form-row', style: { marginBottom: 0 } }, [h('label', '资源名'), h('input', { value: acl.create.resourceName, placeholder: 'orders 或 *', style: { height: '32px', marginBottom: 0 }, onInput: (e) => { acl.create.resourceName = e.target.value } })]),
-          h('div', { class: 'form-row', style: { marginBottom: 0 } }, [h('label', '模式'), h('select', { value: String(acl.create.patternType), style: { height: '32px', marginBottom: 0 }, onChange: (e) => { acl.create.patternType = e.target.value } }, PATTERNS.slice(2).map(([v, t]) => h('option', { value: String(v) }, t)))]),
-          h('div', { class: 'form-row', style: { marginBottom: 0 } }, [h('label', 'Principal'), h('input', { value: acl.create.principal, placeholder: 'User:alice', style: { height: '32px', marginBottom: 0 }, onInput: (e) => { acl.create.principal = e.target.value } })]),
-          h('div', { class: 'form-row', style: { marginBottom: 0 } }, [h('label', '主机'), h('input', { value: acl.create.host, style: { height: '32px', width: '90px', marginBottom: 0 }, onInput: (e) => { acl.create.host = e.target.value } })]),
-          h('div', { class: 'form-row', style: { marginBottom: 0 } }, [h('label', '操作'), h('select', { value: String(acl.create.operation), style: { height: '32px', marginBottom: 0 }, onChange: (e) => { acl.create.operation = e.target.value } }, OPS.slice(2).map(([v, t]) => h('option', { value: String(v) }, t)))]),
-          h('div', { class: 'form-row', style: { marginBottom: 0 } }, [h('label', '权限'), h('select', { value: String(acl.create.permissionType), style: { height: '32px', marginBottom: 0 }, onChange: (e) => { acl.create.permissionType = e.target.value } }, PERMS.slice(2).map(([v, t]) => h('option', { value: String(v) }, t)))]),
-          h('button', { class: 'btn', onClick: aclCreate }, '创建')
+        acl.creating ? h('div', { class: 'acl-form' }, [
+          ctl('资源类型', selOf(String(acl.create.resourceType), (v) => (acl.create.resourceType = v), RES_TYPES.slice(2), '120px')),
+          ctl('资源名', h(ElInput, { modelValue: acl.create.resourceName, 'onUpdate:modelValue': (v) => (acl.create.resourceName = v), size: 'small', placeholder: 'orders 或 *', style: { width: '150px' } })),
+          ctl('模式', selOf(String(acl.create.patternType), (v) => (acl.create.patternType = v), PATTERNS.slice(2), '110px')),
+          ctl('Principal', h(ElInput, { modelValue: acl.create.principal, 'onUpdate:modelValue': (v) => (acl.create.principal = v), size: 'small', placeholder: 'User:alice', style: { width: '150px' } })),
+          ctl('主机', h(ElInput, { modelValue: acl.create.host, 'onUpdate:modelValue': (v) => (acl.create.host = v), size: 'small', style: { width: '90px' } })),
+          ctl('操作', selOf(String(acl.create.operation), (v) => (acl.create.operation = v), OPS.slice(2), '130px')),
+          ctl('权限', selOf(String(acl.create.permissionType), (v) => (acl.create.permissionType = v), PERMS.slice(2), '110px')),
+          h(ElButton, { type: 'primary', size: 'small', onClick: aclCreate }, () => '创建')
         ]) : null,
-        acl.loading && !acl.list.length ? h('div', '加载中…') : filtered.length ? simpleTable(['资源', '模式', 'Principal', '主机', '操作', '权限', ''], filtered.map((a) => [
-          nameOf(RES_TYPES, a.resourceType) + ' · ' + a.resourceName, nameOf(PATTERNS, a.patternType), a.principal, a.host, nameOf(OPS, a.operation), nameOf(PERMS, a.permissionType),
-          h('button', { class: ['btn', 'ghost', 'small'], onClick: () => aclDelete(a) }, '删除')
-        ])) : h('div', { class: 'list-empty' }, '暂无 ACL 规则（集群可能未开启 ACL/授权器）')
+        acl.loading && !acl.list.length ? h('div', { class: 'empty-line' }, '加载中…') : filtered.length ? epTable([
+          { label: '资源', minWidth: 170, cell: (a) => nameOf(RES_TYPES, a.resourceType) + ' · ' + a.resourceName },
+          { label: '模式', width: 90, cell: (a) => nameOf(PATTERNS, a.patternType) },
+          { label: 'Principal', minWidth: 130, cell: (a) => a.principal },
+          { label: '主机', width: 90, cell: (a) => a.host },
+          { label: '操作', width: 110, cell: (a) => nameOf(OPS, a.operation) },
+          { label: '权限', width: 90, cell: (a) => h(ElTag, { size: 'small', effect: 'light', round: true, type: a.permissionType === 3 ? 'success' : a.permissionType === 2 ? 'danger' : 'info' }, () => nameOf(PERMS, a.permissionType)) },
+          { label: '', width: 70, cell: (a) => h(ElButton, { size: 'small', text: true, type: 'danger', onClick: () => aclDelete(a) }, () => '删除') }
+        ], filtered) : h('div', { class: 'empty-line' }, '暂无 ACL 规则（集群可能未开启 ACL/授权器）')
       ])
     }
 
     function renderSchema() {
-      if (!curConn.value) return h('div', { class: 'list-empty' }, [h('div', { class: 'big' }, '先选择一个连接')])
-      if (!curConn.value.srUrl) return h('div', { class: 'list-empty' }, [h('div', { class: 'big' }, '该连接未配置 Schema Registry'), h('div', '编辑连接时填写 SR 地址（如 http://127.0.0.1:8081）后可用')])
+      if (!curConn.value) return emptyPane('先选择一个连接')
+      if (!curConn.value.srUrl) return emptyPane('该连接未配置 Schema Registry', '编辑连接时填写 SR 地址（如 http://127.0.0.1:8081）后可用')
       return h('div', [
-        h('div', { style: { display: 'flex', alignItems: 'center', marginBottom: '8px' } }, [
-          h('span', { class: 'io-label', style: { margin: 0 } }, 'Subjects（' + sr.subjects.length + '）'),
-          sr.compat ? h('span', { class: 'badge', style: { marginLeft: '8px' } }, '全局兼容性 ' + sr.compat) : null,
-          h('span', { style: { flex: 1 } }),
-          h('button', { class: ['btn', 'ghost', 'small'], disabled: sr.loading, onClick: loadSubjects }, '刷新')
+        h('div', { class: 'tab-toolbar' }, [
+          h('span', { class: 'block-label-inline' }, 'Subjects（' + sr.subjects.length + '）'),
+          sr.compat ? h(ElTag, { size: 'small', effect: 'light', round: true }, () => '全局兼容性 ' + sr.compat) : null,
+          h('span', { class: 'flex-spacer' }),
+          h(ElButton, { size: 'small', icon: I.Refresh, loading: sr.loading, onClick: loadSubjects }, () => '刷新')
         ]),
-        sr.err ? h('div', { class: 'err-text' }, '加载失败：' + sr.err) : null,
-        h('div', { style: { display: 'flex', gap: '16px', alignItems: 'flex-start', flexWrap: 'wrap' } }, [
-          h('div', { style: { minWidth: '220px' } }, sr.subjects.map((name) => h('div', { style: { padding: '7px 10px', cursor: 'pointer', borderRadius: '6px', fontSize: '12.5px', background: sr.sel === name ? 'var(--bg-tertiary)' : 'transparent' }, onClick: () => openSubject(name) }, name))),
-          sr.sel ? h('div', { style: { flex: 1, minWidth: '300px' } }, [
-            h('div', { style: { display: 'flex', gap: '6px', marginBottom: '8px', flexWrap: 'wrap' } }, sr.versions.map((v) => h('button', { class: ['gl-tab', { active: sr.selVersion === String(v) }], onClick: () => openSchemaVersion(v) }, 'v' + v))),
-            sr.schema ? h('div', [h('div', { style: { color: 'var(--text-secondary)', fontSize: '12px', marginBottom: '6px' } }, 'Schema ID ' + sr.schema.id + ' · ' + sr.sel + ' v' + sr.schema.version), h('div', { class: 'code-view' }, (() => { try { return JSON.stringify(JSON.parse(sr.schema.schema), null, 2) } catch { return sr.schema.schema } })())]) : null
+        sr.err ? h('div', { class: 'err-text', style: { marginBottom: '8px' } }, '加载失败：' + sr.err) : null,
+        h('div', { class: 'schema-layout' }, [
+          h('div', { class: 'subject-list' }, sr.subjects.map((name) => h('div', { class: ['subject-item', { active: sr.sel === name }], onClick: () => openSubject(name) }, name))),
+          sr.sel ? h('div', { class: 'schema-main' }, [
+            h('div', { class: 'ver-row' }, sr.versions.map((v) => h(ElButton, { size: 'small', type: sr.selVersion === String(v) ? 'primary' : 'default', onClick: () => openSchemaVersion(v) }, () => 'v' + v))),
+            sr.schema ? h('div', [h('div', { class: 'muted', style: { fontSize: '12px', marginBottom: '6px' } }, 'Schema ID ' + sr.schema.id + ' · ' + sr.sel + ' v' + sr.schema.version), h('pre', { class: 'code-view' }, (() => { try { return JSON.stringify(JSON.parse(sr.schema.schema), null, 2) } catch { return sr.schema.schema } })())]) : null
           ]) : null
         ])
       ])
     }
 
-    function maskWrap(children, onMask) { return h('div', { class: 'mask', onClick: (e) => { if (e.target === e.currentTarget && onMask) onMask() } }, children) }
-    function renderConfirm() {
-      return maskWrap([h('div', { class: 'modal', style: { width: '440px' } }, [
-        h('h2', confirmModal.title),
-        h('div', { style: { lineHeight: '1.65', whiteSpace: 'pre-wrap' } }, confirmModal.text),
-        h('div', { class: 'foot' }, [h('button', { class: ['btn', 'ghost'], onClick: () => resolveConfirm(false) }, '取消'), h('button', { class: ['btn', 'danger'], onClick: () => resolveConfirm(true) }, confirmModal.okText)])
-      ])], () => resolveConfirm(false))
-    }
-    function renderPrompt() {
-      return maskWrap([h('div', { class: 'modal', style: { width: '420px' } }, [
-        h('h2', promptModal.title),
-        h('div', { style: { marginBottom: '8px', color: 'var(--text-secondary)', fontSize: '12.5px' } }, promptModal.text),
-        h('input', { value: promptModal.value, type: 'number', onInput: (e) => { promptModal.value = e.target.value } }),
-        h('div', { class: 'foot' }, [h('button', { class: ['btn', 'ghost'], onClick: () => resolvePrompt(false) }, '取消'), h('button', { class: 'btn', onClick: () => resolvePrompt(true) }, promptModal.okText)])
-      ])])
-    }
     function renderEditor() {
-      return maskWrap([h('div', { class: 'modal', style: { width: '490px' } }, [
-        h('h2', editor.id ? '编辑连接' : '新建连接'),
-        h('div', { class: 'form-row' }, [h('label', '名称'), h('input', { value: editor.name, placeholder: '生产集群', onInput: (e) => { editor.name = e.target.value } })]),
-        h('div', { class: 'form-row' }, [h('label', 'Broker 列表（host:port，逗号分隔）'), h('input', { value: editor.brokers, placeholder: 'kafka1:9092,kafka2:9092', onInput: (e) => { editor.brokers = e.target.value } })]),
-        h('div', { class: 'form-row' }, [h('label', 'Client ID'), h('input', { value: editor.clientId, onInput: (e) => { editor.clientId = e.target.value } })]),
-        h('div', { class: 'form-row' }, [h('label', 'SASL/PLAIN 用户名（无则留空，仅支持 PLAIN）'), h('input', { value: editor.saslUser, onInput: (e) => { editor.saslUser = e.target.value } })]),
-        h('div', { class: 'form-row' }, [h('label', 'SASL 密码'), h('input', { value: editor.saslPass, type: 'password', onInput: (e) => { editor.saslPass = e.target.value } })]),
-        h('div', { class: 'form-row' }, [h('label', 'Schema Registry 地址（可选）'), h('input', { value: editor.srUrl, placeholder: 'http://127.0.0.1:8081', onInput: (e) => { editor.srUrl = e.target.value } })]),
-        editor.testMsg ? h('div', { class: editor.testOk ? 'ok-text' : 'err-text' }, editor.testMsg) : null,
-        h('div', { class: 'foot' }, [
-          editor.id ? h('button', { class: ['btn', 'danger'], style: { marginRight: 'auto' }, onClick: deleteEditor }, '删除连接') : null,
-          h('button', { class: ['btn', 'ghost'], disabled: editor.testing, onClick: testEditor }, editor.testing ? '测试中…' : '测试连接'),
-          h('button', { class: ['btn', 'ghost'], onClick: () => { editor.open = false } }, '取消'),
-          h('button', { class: 'btn', onClick: saveEditor }, '保存')
+      return h(ElDialog, { modelValue: editor.open, 'onUpdate:modelValue': (v) => (editor.open = v), title: editor.id ? '编辑连接' : '新建连接', width: '500px', closeOnClickModal: false }, {
+        default: () => h(ElForm, { labelWidth: '92px' }, () => [
+          h(ElFormItem, { label: '名称', required: true }, () => h(ElInput, { modelValue: editor.name, 'onUpdate:modelValue': (v) => (editor.name = v), placeholder: '生产集群' })),
+          h(ElFormItem, { label: 'Broker 列表', required: true }, () => h(ElInput, { modelValue: editor.brokers, 'onUpdate:modelValue': (v) => (editor.brokers = v), placeholder: 'kafka1:9092,kafka2:9092（逗号分隔）' })),
+          h(ElFormItem, { label: 'Client ID' }, () => h(ElInput, { modelValue: editor.clientId, 'onUpdate:modelValue': (v) => (editor.clientId = v) })),
+          h(ElFormItem, { label: 'SASL 用户名' }, () => h(ElInput, { modelValue: editor.saslUser, 'onUpdate:modelValue': (v) => (editor.saslUser = v), placeholder: '无则留空（仅支持 PLAIN）' })),
+          h(ElFormItem, { label: 'SASL 密码' }, () => h(ElInput, { modelValue: editor.saslPass, 'onUpdate:modelValue': (v) => (editor.saslPass = v), type: 'password', showPassword: true })),
+          h(ElFormItem, { label: 'Schema Registry' }, () => h(ElInput, { modelValue: editor.srUrl, 'onUpdate:modelValue': (v) => (editor.srUrl = v), placeholder: '可选，如 http://127.0.0.1:8081' })),
+          h(ElFormItem, { label: ' ' }, () => h('span', { class: 'test-line' }, [
+            h(ElButton, { size: 'small', loading: editor.testing, onClick: testEditor }, () => '测试连接'),
+            editor.testMsg ? h('span', { class: editor.testOk ? 'ok-text' : 'err-text' }, editor.testMsg) : null
+          ]))
+        ]),
+        footer: () => h('div', { class: 'dialog-foot' }, [
+          editor.id ? h(ElButton, { type: 'danger', plain: true, onClick: deleteEditor }, () => '删除') : null,
+          h('span', { class: 'flex-spacer' }),
+          h(ElButton, { onClick: () => (editor.open = false) }, () => '取消'),
+          h(ElButton, { type: 'primary', onClick: saveEditor }, () => '保存')
         ])
-      ])])
+      })
     }
 
+    /* ---------- 根渲染 ---------- */
     return () => {
       const side = h('aside', { class: 'side' }, [
-        h('div', { class: 'side-head' }, [h('span', { style: { fontSize: '13px' } }, 'Kafka 连接'), h('button', { class: 'icon-btn', title: '新建连接', onClick: () => openEditor(null) }, '＋')]),
-        h('div', { class: 'conn-list' }, connections.value.length ? connections.value.map((c) => h('div', { class: ['conn-item', { active: c.id === connId.value }], onClick: () => selectConnection(c.id) }, [
+        h('div', { class: 'side-head' }, [
+          h('span', { class: 'side-title' }, 'Kafka 连接'),
+          h('span', { class: 'flex-spacer' }),
+          h(ElButton, { circle: true, size: 'small', icon: I.Plus, title: '新建连接', onClick: () => openEditor(null) })
+        ]),
+        connections.value.length ? h(ElScrollbar, { class: 'side-scroll' }, () => connections.value.map((c) => h('div', { class: ['conn-item', { active: c.id === connId.value }], onClick: () => selectConnection(c.id) }, [
+          h('span', { class: 'conn-avatar' }, (c.name || '?').slice(0, 1).toUpperCase()),
+          h('span', { class: 'conn-meta' }, [
+            h('span', { class: 'conn-name' }, c.name),
+            h('span', { class: 'conn-sub' }, c.brokers || '')
+          ]),
           h('span', { class: ['conn-dot', { on: session.id && c.id === connId.value }] }),
-          h('span', { class: 'nm' }, c.name),
-          h('button', { class: 'icon-btn', title: '编辑', onClick: (e) => { e.stopPropagation(); openEditor(c) } }, h('span', { innerHTML: '<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"/></svg>', style: { display: 'inline-flex' } }))
-        ])) : h('div', { style: { color: 'var(--text-secondary)', fontSize: '12px', padding: '6px 2px', lineHeight: '1.7' } }, '暂无连接，点右上角 ＋ 新建')),
-        curConn.value ? h('div', { style: { marginTop: '10px' } }, [
+          h(ElButton, { text: true, size: 'small', class: 'conn-edit', icon: I.Edit, title: '编辑', onClick: (e) => { e.stopPropagation(); openEditor(c) } })
+        ]))) : h('div', { class: 'side-empty' }, '暂无连接，点右上角 + 新建'),
+        curConn.value ? h('div', { class: 'side-foot' }, [
           session.id
-            ? h('button', { class: ['btn', 'danger'], style: { width: '100%' }, onClick: disconnect }, '断开（' + session.brokers.length + ' 个 Broker）')
-            : h('button', { class: 'btn', style: { width: '100%' }, disabled: session.connecting, onClick: connect }, session.connecting ? '连接中…' : '连接集群')
+            ? h(ElButton, { type: 'danger', plain: true, style: { width: '100%' }, onClick: disconnect }, () => '断开（' + session.brokers.length + ' 个 Broker）')
+            : h(ElButton, { type: 'primary', style: { width: '100%' }, loading: session.connecting, onClick: connect }, () => '连接集群')
         ]) : null
       ])
       let main
       if (!curConn.value) {
-        main = h('div', { class: 'list-empty', style: { margin: 'auto' } }, [h('div', { class: 'big' }, '欢迎使用 Kafka Studio'), h('div', '新建连接后即可巡检 Topic/Broker/消费组 Lag，流式消费消息，管理 Offset、ACL 与 Schema Registry')])
+        main = h('main', { class: 'main main-center' }, [emptyPane('欢迎使用 Kafka Studio', '新建连接后即可巡检 Topic/Broker/消费组 Lag，流式消费消息，管理 Offset、ACL 与 Schema Registry')])
       } else {
-        const content = tab.value === 'cluster' ? renderCluster() : tab.value === 'messages' ? renderMessages() : tab.value === 'groups' ? renderGroups() : tab.value === 'acl' ? renderAcl() : renderSchema()
         main = h('main', { class: 'main' }, [
-          h('div', { class: 'gl-tabs' }, [['cluster', '集群'], ['messages', '消息'], ['groups', '消费组'], ['acl', 'ACL'], ['schema', 'Schema']].map(([v, t]) => h('button', { class: ['gl-tab', { active: tab.value === v }], onClick: () => switchTab(v) }, t))),
-          content
+          h(ElTabs, { modelValue: tab.value, 'onUpdate:modelValue': (v) => switchTab(v), class: 'main-tabs' }, () => [
+            h(ElTabPane, { label: '集群', name: 'cluster' }, () => renderCluster()),
+            h(ElTabPane, { label: '消息', name: 'messages' }, () => renderMessages()),
+            h(ElTabPane, { label: '消费组', name: 'groups' }, () => renderGroups()),
+            h(ElTabPane, { label: 'ACL', name: 'acl' }, () => renderAcl()),
+            h(ElTabPane, { label: 'Schema', name: 'schema' }, () => renderSchema())
+          ])
         ])
       }
-      return h('div', [
-        h('div', { class: 'topbar' }, [h('h1', 'Kafka Studio'), h('span', { style: { flex: 1 } }), h('button', { class: ['btn', 'ghost'], onClick: toggleTheme }, uiTheme.value === 'dark' ? '切换浅色' : '切换深色')]),
+      return h('div', { class: 'app-root' }, [
+        h('header', { class: 'topbar' }, [
+          h('span', { class: 'logo' }, [h(I.DataLine, { size: 17 })]),
+          h('div', { class: 'title-block' }, [h('h1', 'Kafka Studio'), h('span', { class: 'sub' }, '集群 · 消息 · 消费组 · ACL · Schema')]),
+          h('span', { class: 'flex-spacer' }),
+          h(ElButton, { text: true, icon: uiTheme.value === 'dark' ? I.Sunny : I.Moon, onClick: toggleTheme }, () => (uiTheme.value === 'dark' ? '切换浅色' : '切换深色'))
+        ]),
         h('div', { class: 'layout' }, [side, main]),
-        confirmModal.open ? renderConfirm() : null,
-        promptModal.open ? renderPrompt() : null,
-        editor.open ? renderEditor() : null,
-        h('div', { class: ['toast', { show: toastShow.value }] }, toastText.value)
+        editor.open ? renderEditor() : null
       ])
     }
   }
 }
-createApp(App).mount('#app')
+const app = createApp(App)
+app.use(ElementPlus)
+app.mount('#app')

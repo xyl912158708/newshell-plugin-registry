@@ -45,57 +45,59 @@ const a = document.createElement('a')
 a.href = URL.createObjectURL(blob); a.download = name; a.click()
 setTimeout(() => URL.revokeObjectURL(a.href), 4000)
 }
+const { ElButton, ElInput, ElInputNumber, ElSelect, ElOption, ElCheckbox, ElColorPicker } = ElementPlus
 function field(label, control, width) {
-return h('div', { class: 'form-row', style: width? { width}: null}, [h('label', label), control])
+  return h('div', { class: 'ctl', style: width ? { width } : null }, [h('span', { class: 'ctl-label' }, label), control])
 }
 function sel(s, key, options, width) {
-return h('select', { value: s[key], style: width? { width}: null, onChange: (e) => { s[key] = e.target.value}},
-options.map(([v, t]) => h('option', { value: v}, t)))
+  return h(ElSelect, { modelValue: s[key], 'onUpdate:modelValue': (v) => { s[key] = v }, size: 'small', style: width ? { width } : { width: '150px' } }, () =>
+    options.map(([v, t]) => h(ElOption, { label: t, value: v })))
 }
 function txt(s, key, opts) {
-opts = opts || {}
-return h('input', { value: s[key], placeholder: opts.ph || '', style: opts.width? { width: opts.width}: null, type: opts.type || 'text', onInput: (e) => { s[key] = e.target.value}})
+  opts = opts || {}
+  return h(ElInput, { modelValue: s[key], 'onUpdate:modelValue': (v) => { s[key] = v }, placeholder: opts.ph || '', size: 'small', type: opts.type || 'text', showPassword: opts.type === 'password', style: opts.width ? { width: opts.width } : null })
 }
-function num(s, key, opts) { opts = opts || {}; return h('input', { value: s[key], type: 'number', min: opts.min, max: opts.max, style: { width: opts.width || '90px'}, onInput: (e) => { s[key] = e.target.value}})}
+function num(s, key, opts) {
+  opts = opts || {}
+  return h(ElInputNumber, { modelValue: s[key] === '' || s[key] === null || s[key] === undefined ? null : Number(s[key]), 'onUpdate:modelValue': (v) => { s[key] = v === null || v === undefined ? '' : v }, min: opts.min, max: opts.max, size: 'small', controls: false, style: { width: opts.width || '90px' } })
+}
 function chk(s, key, label) {
-return h('label', { style: { display: 'inline-flex', alignItems: 'center', gap: '5px', fontSize: '12.5px', cursor: 'pointer'}}, [
-h('input', { type: 'checkbox', checked:!!s[key], style: { width: 'auto', margin: 0}, onChange: (e) => { s[key] = e.target.checked}}), label
-])
+  return h(ElCheckbox, { modelValue: !!s[key], 'onUpdate:modelValue': (v) => { s[key] = v }, label })
 }
 function area(s, key, opts) {
-opts = opts || {}
-return h('textarea', { class: 'io', value: s[key], placeholder: opts.ph || '', style: opts.h? { minHeight: opts.h + 'px'}: null, spellcheck: false, onInput: (e) => { s[key] = e.target.value}})
+  opts = opts || {}
+  return h(ElInput, { modelValue: s[key], 'onUpdate:modelValue': (v) => { s[key] = v }, type: 'textarea', placeholder: opts.ph || '', spellcheck: false, autosize: opts.h ? { minRows: Math.max(2, Math.round(opts.h / 21)) } : { minRows: 5, maxRows: 16 }, class: 'io' })
 }
 function outArea(s, opts) {
-opts = opts || {}
-return h('div', [
-h('div', { class: 'io-label'}, [h('span', opts.label || '输出'), h('span', { class: 'ops'}, [
-h('span', { style: { color: 'var(--text-secondary)', fontWeight: 400}}, s.output? s.output.length + ' 字符': ''),
-h('button', { class: ['btn', 'ghost', 'small'], onClick: () => { if (s.output) copyText(s.output)}}, '复制')
-])]),
-h('textarea', { class: 'io', value: s.output, readonly: true, spellcheck: false, style: opts.h? { minHeight: opts.h + 'px'}: null, placeholder: '结果显示在这里'}),
-s.error? h('div', { class: 'err-text', style: { marginTop: '6px'}}, s.error): null
-])
+  opts = opts || {}
+  return h('div', [
+    h('div', { class: 'io-label' }, [h('span', opts.label || '输出'), h('span', { class: 'ops' }, [
+      h('span', { class: 'muted' }, s.output ? s.output.length + ' 字符' : ''),
+      h(ElButton, { text: true, size: 'small', onClick: () => { if (s.output) copyText(s.output) } }, () => '复制')
+    ])]),
+    h(ElInput, { modelValue: s.output, type: 'textarea', readonly: true, spellcheck: false, autosize: opts.h ? { minRows: Math.max(2, Math.round(opts.h / 21)) } : { minRows: 5, maxRows: 16 }, placeholder: '结果显示在这里', class: 'io' }),
+    s.error ? h('div', { class: 'err-text', style: { marginTop: '6px' } }, s.error) : null
+  ])
 }
 /* 标准 IO 工具布局：输入 + 选项 + 转换 + 输出 */
 function ioTool(def, s) {
-const run = () => {
-try { s.output = def.run(s); s.error = ''} catch (e) { s.error = e.message;}
-}
-if (s.auto) { try { s.output = def.run(s); s.error = ''} catch (e) { s.error = e.message}}
-return h('div', [
-h('div', { class: 'io-label'}, [h('span', '输入'), h('span', { class: 'ops'}, [
-h('button', { class: ['btn', 'ghost', 'small'], onClick: () => { s.input = ''; s.output = ''; s.error = ''}}, '清空')
-])]),
-area(s, 'input', { ph: def.ph || '在此输入…'}),
-def.options? h('div', { class: 'opt-row'}, def.options(s)): null,
-h('div', { style: { display: 'flex', gap: '10px', alignItems: 'center', margin: '10px 0'}}, [
-h('button', { class: 'btn', onClick: run}, def.action || '转换'),
-chk(s, 'auto', '输入时自动转换'),
-def.note? h('span', { style: { color: 'var(--text-secondary)', fontSize: '12px'}}, def.note): null
-]),
-outArea(s)
-])
+  const run = () => {
+    try { s.output = def.run(s); s.error = '' } catch (e) { s.error = e.message }
+  }
+  if (s.auto) { try { s.output = def.run(s); s.error = '' } catch (e) { s.error = e.message } }
+  return h('div', [
+    h('div', { class: 'io-label' }, [h('span', '输入'), h('span', { class: 'ops' }, [
+      h(ElButton, { text: true, size: 'small', onClick: () => { s.input = ''; s.output = ''; s.error = '' } }, () => '清空')
+    ])]),
+    area(s, 'input', { ph: def.ph || '在此输入…' }),
+    def.options ? h('div', { class: 'opt-row' }, def.options(s)) : null,
+    h('div', { class: 'action-row' }, [
+      h(ElButton, { type: 'primary', onClick: run }, () => def.action || '转换'),
+      chk(s, 'auto', '输入时自动转换'),
+      def.note ? h('span', { class: 'muted', style: { fontSize: '12px' } }, def.note) : null
+    ]),
+    outArea(s)
+  ])
 }
 
 /* ---------- 工具定义 ---------- */
@@ -165,7 +167,7 @@ h('div', { class: 'opt-row'}, [
 field('长度', num(s, 'len', { min: 4, max: 128, width: '76px'})),
 field('数量', num(s, 'count', { min: 1, max: 50, width: '76px'})),
 chk(s, 'lower', '小写'), chk(s, 'upper', '大写'), chk(s, 'digit', '数字'), chk(s, 'symbol', '符号'),
-h('button', { class: 'btn', onClick: gen}, '生成'),
+h(ElButton, { type: 'primary', onClick: gen }, () => '生成'),
 s.entropy? h('span', { style: { color: 'var(--text-secondary)', fontSize: '12px'}}, '单条熵约 ' + s.entropy + ' bit'): null
 ]),
 outArea(s, { label: '生成的密码'})
@@ -317,7 +319,7 @@ tool({ id: 'regex', cat: '文本处理', name: '正则测试', desc: '匹配高�
         h('tr', [h('th', '位置'), h('th', '匹配'), h('th', '捕获组')]),
         ...matches.slice(0, 50).map((m) => h('tr', [h('td', String(m.index)), h('td', { class: 'mono' }, m[0]), h('td', { class: 'mono' }, m.slice(1).map((g, i) => '$' + (i + 1) + '=' + (g === undefined ? '∅' : g)).join('  ') || '-')]))
       ]) : null,
-      s.replace ? h('div', [h('div', { class: 'io-label', style: { marginTop: '12px' } }, [h('span', '替换结果'), h('button', { class: ['btn', 'ghost', 'small'], onClick: () => copyText(replaced) }, '复制')]), h('div', { class: 'regex-marks' }, replaced)]) : null
+      s.replace ? h('div', [h('div', { class: 'io-label', style: { marginTop: '12px' } }, [h('span', '替换结果'), h(ElButton, { text: true, size: 'small', onClick: () => copyText(replaced) }, () => '复制')]), h('div', { class: 'regex-marks' }, replaced)]) : null
     ])
   } })
 
@@ -535,7 +537,7 @@ tool({ id: 'qr', cat: '图像生成', name: '二维码生成', desc: '纯 JS 生
       area(s, 'text', { ph: '输入文本或链接…', h: 76 }),
       h('div', { class: 'opt-row' }, [
         field('PNG 尺寸', sel(s, 'size', [['256', '256'], ['512', '512'], ['1024', '1024']])),
-        h('button', { class: 'btn', onClick: () => { const cv = document.getElementById('qrCanvas'); if (cv) cv.toBlob((b) => download('qrcode.png', b), 'image/png') } }, '下载 PNG')
+        h(ElButton, { type: 'primary', onClick: () => { const cv = document.getElementById('qrCanvas'); if (cv) cv.toBlob((b) => download('qrcode.png', b), 'image/png') } }, () => '下载 PNG')
       ]),
       s.err ? h('div', { class: 'err-text' }, s.err) : null,
       h('div', { class: 'qr-wrap' }, [h('div', { class: 'qr-canvas-box' }, [h('canvas', { id: 'qrCanvas', style: { width: '260px', height: '260px' } })])])
@@ -561,12 +563,12 @@ tool({ id: 'placeholder', cat: '图像生成', name: '占位图生成', desc: '�
     return h('div', [
       h('div', { class: 'opt-row' }, [
         field('宽', num(s, 'w', { min: 16, max: 2000 })), field('高', num(s, 'h', { min: 16, max: 2000 })),
-        field('背景', h('input', { type: 'color', value: s.bg, style: { width: '52px', height: '32px', padding: '2px' }, onInput: (e) => { s.bg = e.target.value } })),
-        field('文字色', h('input', { type: 'color', value: s.fg, style: { width: '52px', height: '32px', padding: '2px' }, onInput: (e) => { s.fg = e.target.value } })),
+        field('背景', h(ElColorPicker, { modelValue: s.bg, 'onUpdate:modelValue': (v) => { s.bg = v || '#000000' } })),
+        field('文字色', h(ElColorPicker, { modelValue: s.fg, 'onUpdate:modelValue': (v) => { s.fg = v || '#000000' } })),
         field('文字（空=尺寸）', txt(s, 'text', { width: '150px' })),
-        h('button', { class: 'btn', onClick: () => { const cv = document.getElementById('phCanvas'); if (cv) cv.toBlob((b) => download('placeholder.png', b), 'image/png') } }, '下载 PNG')
+        h(ElButton, { type: 'primary', onClick: () => { const cv = document.getElementById('phCanvas'); if (cv) cv.toBlob((b) => download('placeholder.png', b), 'image/png') } }, () => '下载 PNG')
       ]),
-      h('canvas', { id: 'phCanvas', style: { maxWidth: '100%', borderRadius: '8px', border: '1px solid var(--border-color)' } })
+      h('canvas', { id: 'phCanvas', style: { maxWidth: '100%', borderRadius: '8px', border: '1px solid var(--el-border-color-lighter)' } })
     ])
   } })
 tool({ id: 'color', cat: '图像生成', name: '颜色工具', desc: 'HEX/RGB/HSL 互转与对比度（WCAG）计算。',
@@ -597,7 +599,7 @@ tool({ id: 'color', cat: '图像生成', name: '颜色工具', desc: 'HEX/RGB/HS
     return h('div', [
       h('div', { class: 'qr-wrap' }, [
         h('div', { style: { width: '220px' } }, [h('div', { class: 'swatch', style: { background: rgb ? s.hex : 'transparent' } }),
-          h('div', { class: 'opt-row' }, [field('颜色', txt(s, 'hex', { width: '110px' })), h('input', { type: 'color', value: rgb ? s.hex : '#000000', style: { width: '46px', height: '32px', padding: '2px' }, onInput: (e) => { s.hex = e.target.value } })])]),
+          h('div', { class: 'opt-row' }, [field('颜色', txt(s, 'hex', { width: '110px' })), h(ElColorPicker, { modelValue: rgb ? s.hex : '#000000', 'onUpdate:modelValue': (v) => { if (v) s.hex = v } })])]),
         h('div', { style: { flex: 1, minWidth: '260px' } }, [
           rows.length ? h('table', { class: 'kv-table' }, rows.map(([k, v]) => h('tr', [h('td', k), h('td', { class: 'mono' }, v)]))) : h('div', { class: 'err-text' }, '颜色格式无效（示例 #2dd4bf）'),
           h('div', { class: 'opt-row' }, [field('对比色', txt(s, 'hex2', { width: '110px' }))]),
@@ -609,19 +611,19 @@ tool({ id: 'color', cat: '图像生成', name: '颜色工具', desc: 'HEX/RGB/HS
 
 /* ---------- 应用外壳 ---------- */
 const CATS = ['加解密', '编解码', '文本处理', '数据转换', '格式化', '时间计算', '网络运维', '图像生成']
+const { ElScrollbar, ElEmpty } = ElementPlus
+const TB_ICONS = window.EP_ICONS || {}
 const App = {
   setup() {
     const uiTheme = ref('dark')
-    const toastText = ref('')
-    const toastShow = ref(false)
-    let toastTimer = null
-    toastFn = (msg) => { toastText.value = msg; toastShow.value = true; clearTimeout(toastTimer); toastTimer = setTimeout(() => { toastShow.value = false }, 2600) }
+    toastFn = (msg) => { try { ElementPlus.ElMessage({ message: msg, duration: 2200, grouping: true }) } catch (_) {} }
     const activeId = ref('hash')
     const query = ref('')
     const nowText = ref('')
     let nowTimer = null
     async function toggleTheme() {
       uiTheme.value = uiTheme.value === 'dark' ? 'light' : 'dark'
+      document.documentElement.classList.toggle('dark', uiTheme.value === 'dark')
       if (window.__osSetTheme) window.__osSetTheme(uiTheme.value)
       try { await storeBridge.set('ui-theme', uiTheme.value) } catch (_) { /* ignore */ }
     }
@@ -635,7 +637,7 @@ const App = {
     watch([activeId, query], () => nextTick(resize))
     watch(S, () => nextTick(resize), { deep: true })
     onMounted(async () => {
-      try { const t = await storeBridge.get('ui-theme'); if (t === 'light' || t === 'dark') { uiTheme.value = t; if (window.__osSetTheme) window.__osSetTheme(t) } } catch (_) { /* ignore */ }
+      try { const t = await storeBridge.get('ui-theme'); if (t === 'light' || t === 'dark') { uiTheme.value = t; document.documentElement.classList.toggle('dark', t === 'dark'); if (window.__osSetTheme) window.__osSetTheme(t) } } catch (_) { /* ignore */ }
       const tick = () => { const s = st('timestamp', {}); s.nowText = Math.floor(Date.now() / 1000) + ' 秒 / ' + Date.now() + ' 毫秒'; nowText.value = s.nowText }
       tick(); nowTimer = setInterval(tick, 1000)
       nextTick(resize)
@@ -648,30 +650,31 @@ const App = {
       const navGroups = CATS.map((cat) => {
         const items = TOOLS.filter((t) => t.cat === cat && (!q || t.name.toLowerCase().includes(q) || t.desc.toLowerCase().includes(q)))
         if (!items.length) return null
-        return h('div', [h('div', { class: 'nav-cat' }, cat), ...items.map((t) => h('button', { class: ['nav-item', { active: t.id === activeId.value }], onClick: () => { activeId.value = t.id } }, t.name))])
+        return h('div', { class: 'nav-group' }, [h('div', { class: 'nav-cat' }, cat), ...items.map((t) => h('div', { class: ['nav-item', { active: t.id === activeId.value }], onClick: () => { activeId.value = t.id } }, t.name))])
       }).filter(Boolean)
-      return h('div', [
-        h('div', { class: 'topbar' }, [
-          h('h1', '开发者工具箱'),
-          h('span', { style: { color: 'var(--text-secondary)', fontSize: '12px' } }, TOOLS.length + ' 个工具 · 完全离线'),
-          h('span', { style: { flex: 1 } }),
-          h('button', { class: ['btn', 'ghost'], onClick: toggleTheme }, uiTheme.value === 'dark' ? '切换浅色' : '切换深色')
+      return h('div', { class: 'app-root' }, [
+        h('header', { class: 'topbar' }, [
+          h('span', { class: 'logo' }, [h(TB_ICONS.Grid, { size: 17 })]),
+          h('div', { class: 'title-block' }, [h('h1', '开发者工具箱'), h('span', { class: 'sub' }, TOOLS.length + ' 个工具 · 完全离线')]),
+          h('span', { class: 'flex-spacer' }),
+          h(ElButton, { text: true, icon: uiTheme.value === 'dark' ? TB_ICONS.Sunny : TB_ICONS.Moon, onClick: toggleTheme }, () => (uiTheme.value === 'dark' ? '切换浅色' : '切换深色'))
         ]),
         h('div', { class: 'layout' }, [
-          h('aside', { class: 'nav' }, [
-            h('div', { class: 'nav-search' }, [h('input', { value: query.value, placeholder: '搜索工具…', style: { height: '32px', fontSize: '12.5px' }, onInput: (e) => { query.value = e.target.value } })]),
-            ...navGroups
+          h('aside', { class: 'side tb-side' }, [
+            h('div', { class: 'nav-search' }, [h(ElInput, { modelValue: query.value, 'onUpdate:modelValue': (v) => (query.value = v), placeholder: '搜索工具…', size: 'small', clearable: true, prefixIcon: TB_ICONS.Search })]),
+            h(ElScrollbar, { class: 'side-scroll' }, () => navGroups.length ? navGroups : [h('div', { class: 'side-empty' }, '没有匹配的工具')])
           ]),
-          h('main', { class: 'main', style: { display: 'flex' } }, [
+          h('main', { class: 'main' }, [
             h('div', { class: 'tool-panel' }, [
               h('div', { class: 'tool-head' }, [h('h2', def.name), h('div', { class: 'desc' }, def.desc)]),
               def.custom ? def.custom(s) : ioTool(def, s)
             ])
           ])
-        ]),
-        h('div', { class: ['toast', { show: toastShow.value }] }, toastText.value)
+        ])
       ])
     }
   }
 }
-createApp(App).mount('#app')
+const app = createApp(App)
+app.use(ElementPlus)
+app.mount('#app')

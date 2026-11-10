@@ -22,6 +22,10 @@ ROOT = os.path.dirname(os.path.abspath(__file__))
 PLUGINS = ['dev-toolbox', 'gitlab-console', 'kafka-studio', 'object-storage']
 
 PICO_HEAD = '/* Pico.css v2.0.6 (MIT) inline copy of vendor/pico.conditional.min.css */'
+EP_CSS_HEAD = '/* Element Plus 2.11.8 (MIT) inline copy of vendor/element-plus.css */'
+EP_DARK_HEAD = '/* Element Plus dark vars (MIT) inline copy of vendor/element-plus-dark-vars.css */'
+EP_JS_HEAD = '/* Element Plus 2.11.8 (MIT) inline copy of vendor/element-plus.full.min.js */'
+EP_ICONS_HEAD = '/* Element Plus Icons 2.3.2 (MIT) extracted paths, see vendor/ep-icons.js */'
 VUE_HEAD = '/* Vue 3.5.13 (MIT) inline copy of vendor/vue.global.prod.js */'
 
 
@@ -35,11 +39,23 @@ def build(pid):
                         '<style>\n' + PICO_HEAD + '\n' + read(pid, 'vendor/pico.conditional.min.css') + '\n</style>')
     html = html.replace('<!-- __VUE_JS__ -->',
                         '<script>\n' + VUE_HEAD + '\n' + read(pid, 'vendor/vue.global.prod.js') + '\n</script>')
+    if '<!-- __EP_CSS__ -->' in html:
+        html = html.replace('<!-- __EP_CSS__ -->',
+                            '<style>\n' + EP_CSS_HEAD + '\n' + read(pid, 'vendor/element-plus.css') + '\n</style>')
+    if '<!-- __EP_DARK_CSS__ -->' in html:
+        html = html.replace('<!-- __EP_DARK_CSS__ -->',
+                            '<style>\n' + EP_DARK_HEAD + '\n' + read(pid, 'vendor/element-plus-dark-vars.css') + '\n</style>')
+    if '<!-- __EP_JS__ -->' in html:
+        html = html.replace('<!-- __EP_JS__ -->',
+                            '<script>\n' + EP_JS_HEAD + '\n' + read(pid, 'vendor/element-plus.full.min.js') + '\n</script>')
+    if '<!-- __EP_ICONS_JS__ -->' in html:
+        html = html.replace('<!-- __EP_ICONS_JS__ -->',
+                            '<script>\n' + EP_ICONS_HEAD + '\n' + read(pid, 'vendor/ep-icons.js') + '\n</script>')
     if '<!-- __LIB_JS__ -->' in html:
         html = html.replace('<!-- __LIB_JS__ -->', read(pid, 'lib.js'))
     if '<!-- __APP_JS__ -->' in html:
         html = html.replace('<!-- __APP_JS__ -->', read(pid, 'app.js'))
-    for token in ('__PICO_CSS__', '__VUE_JS__', '__APP_JS__', '__LIB_JS__'):
+    for token in ('__PICO_CSS__', '__VUE_JS__', '__APP_JS__', '__LIB_JS__', '__EP_CSS__', '__EP_DARK_CSS__', '__EP_JS__', '__EP_ICONS_JS__'):
         assert token not in html, f'{pid}: placeholder {token} left'
     out = os.path.join(ROOT, pid, 'index.html')
     io.open(out, 'w', encoding='utf-8').write(html)
