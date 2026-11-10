@@ -567,7 +567,7 @@ tool({ id: 'placeholder', cat: '图像生成', name: '占位图生成', desc: '�
     ])
   } })
 tool({ id: 'color', cat: '图像生成', name: '颜色工具', desc: 'HEX/RGB/HSL 互转与对比度（WCAG）计算。',
-  defaults: { hex: '#2563eb', hex2: '#ffffff' },
+  defaults: { hex: '#2dd4bf', hex2: '#ffffff' },
   custom(s) {
     const parse = (v) => {
       const m = String(v).trim().match(/^#?([0-9a-f]{6}|[0-9a-f]{3})$/i)
@@ -596,7 +596,7 @@ tool({ id: 'color', cat: '图像生成', name: '颜色工具', desc: 'HEX/RGB/HS
         h('div', { style: { width: '220px' } }, [h('div', { class: 'swatch', style: { background: rgb ? s.hex : 'transparent' } }),
           h('div', { class: 'opt-row' }, [field('颜色', txt(s, 'hex', { width: '110px' })), h('input', { type: 'color', value: rgb ? s.hex : '#000000', style: { width: '46px', height: '32px', padding: '2px' }, onInput: (e) => { s.hex = e.target.value } })])]),
         h('div', { style: { flex: 1, minWidth: '260px' } }, [
-          rows.length ? h('table', { class: 'kv-table' }, rows.map(([k, v]) => h('tr', [h('td', k), h('td', { class: 'mono' }, v)]))) : h('div', { class: 'err-text' }, '颜色格式无效（示例 #2563eb）'),
+          rows.length ? h('table', { class: 'kv-table' }, rows.map(([k, v]) => h('tr', [h('td', k), h('td', { class: 'mono' }, v)]))) : h('div', { class: 'err-text' }, '颜色格式无效（示例 #2dd4bf）'),
           h('div', { class: 'opt-row' }, [field('对比色', txt(s, 'hex2', { width: '110px' }))]),
           contrast ? h('div', { style: { fontSize: '12.5px' } }, contrast) : null
         ])

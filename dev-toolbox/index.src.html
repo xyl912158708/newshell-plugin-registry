@@ -15,26 +15,26 @@ window.__osSetTheme = function (t) { document.documentElement.dataset.osTheme = 
    * 故布局 token 直接取色板值（与 Pico 深色板同源），不依赖媒体查询。 */
   :root {
     color-scheme: dark;
-    --bg-primary: #13171f;
-    --bg-secondary: #1c212c;
-    --bg-tertiary: #262d3b;
-    --text-primary: #e4e8ef;
-    --text-secondary: #9aa5b5;
-    --text-muted: #79849a;
-    --accent-color: #89b4fa;
-    --border-color: #39415a;
+    --bg-primary: #080b12;
+    --bg-secondary: #0f131e;
+    --bg-tertiary: #171d2c;
+    --text-primary: #e6ecf3;
+    --text-secondary: #9aa4b8;
+    --text-muted: #8494b3;
+    --accent-color: #2dd4bf;
+    --border-color: rgba(255,255,255,0.09);
   }
   @media (prefers-color-scheme: light) {
     :root {
       color-scheme: light;
       --bg-primary: #ffffff;
-      --bg-secondary: #f4f5f7;
-      --bg-tertiary: #e8eaee;
-      --text-primary: #1f2430;
-      --text-secondary: #5b6472;
-      --text-muted: #828da0;
-      --accent-color: #2563eb;
-      --border-color: #d4d9e0;
+      --bg-secondary: #f5f6f8;
+      --bg-tertiary: #edf0f4;
+      --text-primary: #111827;
+      --text-secondary: #4b5563;
+      --text-muted: #5b6b82;
+      --accent-color: #0f766e;
+      --border-color: rgba(0,0,0,0.13);
     }
   }
   /* Pico 控件色板在 .pico 作用域内跟随媒体查询切换（宿主为 Electron，
@@ -44,48 +44,48 @@ window.__osSetTheme = function (t) { document.documentElement.dataset.osTheme = 
     --pico-border-radius: 0.375rem;
     --pico-form-element-spacing-vertical: 0.42rem;
     --pico-form-element-spacing-horizontal: 0.65rem;
-    --pico-background-color: #13171f;
-    --pico-color: #e4e8ef;
-    --pico-h1-color: #e4e8ef; --pico-h2-color: #e4e8ef; --pico-h3-color: #e4e8ef; --pico-h4-color: #e4e8ef; --pico-h5-color: #e4e8ef; --pico-h6-color: #e4e8ef;
-    --pico-muted-color: #9aa5b5;
-    --pico-muted-border-color: #2a3140;
-    --pico-card-background-color: #1c212c;
-    --pico-card-border-color: #39415a;
-    --pico-dropdown-hover-background-color: #262d3b;
-    --pico-form-element-background-color: #171b24;
-    --pico-form-element-border-color: #39415a;
-    --pico-form-element-color: #e4e8ef;
-    --pico-form-element-placeholder-color: #79849a;
-    --pico-form-element-active-background-color: #171b24;
-    --pico-form-element-active-border-color: #89b4fa;
-    --pico-form-element-focus-color: color-mix(in srgb, #89b4fa 55%, transparent);
-    --pico-switch-background-color: #39415a;
-    --pico-primary-background: #89b4fa; --pico-primary-border: #89b4fa;
-    --pico-primary-hover-background: #a5c8fc; --pico-primary-hover-border: #a5c8fc;
-    --pico-primary-focus: color-mix(in srgb, #89b4fa 55%, transparent);
-    --pico-primary: #11111b; --pico-primary-hover: #11111b; --pico-primary-inverse: #11111b;
-    --pico-h1-color: #e4e8ef; --pico-h2-color: #e4e8ef; --pico-h3-color: #e4e8ef; --pico-h4-color: #e4e8ef; --pico-h5-color: #e4e8ef; --pico-h6-color: #e4e8ef;
+    --pico-background-color: #080b12;
+    --pico-color: #e6ecf3;
+    --pico-h1-color: #e6ecf3; --pico-h2-color: #e6ecf3; --pico-h3-color: #e6ecf3; --pico-h4-color: #e6ecf3; --pico-h5-color: #e6ecf3; --pico-h6-color: #e6ecf3;
+    --pico-muted-color: #9aa4b8;
+    --pico-muted-border-color: rgba(255,255,255,0.05);
+    --pico-card-background-color: #0f131e;
+    --pico-card-border-color: rgba(255,255,255,0.09);
+    --pico-dropdown-hover-background-color: #171d2c;
+    --pico-form-element-background-color: #0d1220;
+    --pico-form-element-border-color: rgba(255,255,255,0.09);
+    --pico-form-element-color: #e6ecf3;
+    --pico-form-element-placeholder-color: #8494b3;
+    --pico-form-element-active-background-color: #0d1220;
+    --pico-form-element-active-border-color: #2dd4bf;
+    --pico-form-element-focus-color: color-mix(in srgb, #2dd4bf 55%, transparent);
+    --pico-switch-background-color: rgba(255,255,255,0.09);
+    --pico-primary-background: #2dd4bf; --pico-primary-border: #2dd4bf;
+    --pico-primary-hover-background: #14b8a6; --pico-primary-hover-border: #14b8a6;
+    --pico-primary-focus: color-mix(in srgb, #2dd4bf 55%, transparent);
+    --pico-primary: #0a0f14; --pico-primary-hover: #0a0f14; --pico-primary-inverse: #0a0f14;
+    --pico-h1-color: #e6ecf3; --pico-h2-color: #e6ecf3; --pico-h3-color: #e6ecf3; --pico-h4-color: #e6ecf3; --pico-h5-color: #e6ecf3; --pico-h6-color: #e6ecf3;
   }
   @media (prefers-color-scheme: light) {
     .pico {
       --pico-background-color: #ffffff;
-      --pico-color: #1f2430;
-      --pico-h1-color: #1f2430; --pico-h2-color: #1f2430; --pico-h3-color: #1f2430; --pico-h4-color: #1f2430; --pico-h5-color: #1f2430; --pico-h6-color: #1f2430;
-      --pico-muted-color: #5b6472;
-      --pico-muted-border-color: #e8eaee;
-      --pico-card-background-color: #f4f5f7;
-      --pico-card-border-color: #d4d9e0;
-      --pico-dropdown-hover-background-color: #e8eaee;
+      --pico-color: #111827;
+      --pico-h1-color: #111827; --pico-h2-color: #111827; --pico-h3-color: #111827; --pico-h4-color: #111827; --pico-h5-color: #111827; --pico-h6-color: #111827;
+      --pico-muted-color: #4b5563;
+      --pico-muted-border-color: #edf0f4;
+      --pico-card-background-color: #f5f6f8;
+      --pico-card-border-color: rgba(0,0,0,0.13);
+      --pico-dropdown-hover-background-color: #edf0f4;
       --pico-form-element-background-color: #ffffff;
-      --pico-form-element-border-color: #d4d9e0;
-      --pico-form-element-color: #1f2430;
-      --pico-form-element-placeholder-color: #828da0;
+      --pico-form-element-border-color: rgba(0,0,0,0.13);
+      --pico-form-element-color: #111827;
+      --pico-form-element-placeholder-color: #5b6b82;
       --pico-form-element-active-background-color: #ffffff;
-      --pico-form-element-active-border-color: #2563eb;
-      --pico-form-element-focus-color: color-mix(in srgb, #2563eb 45%, transparent);
-      --pico-primary-background: #2563eb; --pico-primary-border: #2563eb;
-      --pico-primary-hover-background: #1d4ed8; --pico-primary-hover-border: #1d4ed8;
-      --pico-primary-focus: color-mix(in srgb, #2563eb 45%, transparent);
+      --pico-form-element-active-border-color: #0f766e;
+      --pico-form-element-focus-color: color-mix(in srgb, #0f766e 45%, transparent);
+      --pico-primary-background: #0f766e; --pico-primary-border: #0f766e;
+      --pico-primary-hover-background: #115e59; --pico-primary-hover-border: #115e59;
+      --pico-primary-focus: color-mix(in srgb, #0f766e 45%, transparent);
       --pico-primary: #ffffff; --pico-primary-hover: #ffffff; --pico-primary-inverse: #ffffff;
     }
   }
@@ -94,54 +94,54 @@ window.__osSetTheme = function (t) { document.documentElement.dataset.osTheme = 
   body {
     height: 100vh; overflow: hidden;
     font-family: var(--pico-font-family);
-    background: var(--bg-primary, #1e1e2e); color: var(--text-primary, #cdd6f4);
+    background: var(--bg-primary, #080b12); color: var(--text-primary, #e6ecf3);
     font-size: 13px; padding: 14px 16px 22px; -webkit-font-smoothing: antialiased;
   }
   /* 主题接管：JS 按宿主 html/body 的 light 类给 <html> 打 data-os-theme，
    * 全部 token 以该属性为准（!特异性高于媒体查询块），根治宿主与系统外观不一致。 */
   :root[data-os-theme="dark"] {
     color-scheme: dark;
-    --bg-primary: #13171f; --bg-secondary: #1c212c; --bg-tertiary: #262d3b;
-    --text-primary: #e4e8ef; --text-secondary: #9aa5b5; --text-muted: #79849a;
-    --accent-color: #89b4fa; --border-color: #39415a;
+    --bg-primary: #080b12; --bg-secondary: #0f131e; --bg-tertiary: #171d2c;
+    --text-primary: #e6ecf3; --text-secondary: #9aa4b8; --text-muted: #8494b3;
+    --accent-color: #2dd4bf; --border-color: rgba(255,255,255,0.09);
   }
   :root[data-os-theme="light"] {
     color-scheme: light;
-    --bg-primary: #ffffff; --bg-secondary: #f4f5f7; --bg-tertiary: #e8eaee;
-    --text-primary: #1f2430; --text-secondary: #5b6472; --text-muted: #828da0;
-    --accent-color: #2563eb; --border-color: #d4d9e0;
+    --bg-primary: #ffffff; --bg-secondary: #f5f6f8; --bg-tertiary: #edf0f4;
+    --text-primary: #111827; --text-secondary: #4b5563; --text-muted: #5b6b82;
+    --accent-color: #0f766e; --border-color: rgba(0,0,0,0.13);
   }
   :root[data-os-theme="dark"] .pico {
-    --pico-background-color: #13171f; --pico-color: #e4e8ef;
-    --pico-h1-color: #e4e8ef; --pico-h2-color: #e4e8ef; --pico-h3-color: #e4e8ef; --pico-h4-color: #e4e8ef; --pico-h5-color: #e4e8ef; --pico-h6-color: #e4e8ef;
-    --pico-muted-color: #9aa5b5; --pico-muted-border-color: #2a3140;
-    --pico-card-background-color: #1c212c; --pico-card-border-color: #39415a;
-    --pico-dropdown-hover-background-color: #262d3b;
-    --pico-form-element-background-color: #171b24; --pico-form-element-border-color: #39415a;
-    --pico-form-element-color: #e4e8ef; --pico-form-element-placeholder-color: #79849a;
-    --pico-form-element-active-background-color: #171b24; --pico-form-element-active-border-color: #89b4fa;
-    --pico-form-element-focus-color: color-mix(in srgb, #89b4fa 55%, transparent);
-    --pico-switch-background-color: #39415a;
-    --pico-primary-background: #89b4fa; --pico-primary-border: #89b4fa;
-    --pico-primary-hover-background: #a5c8fc; --pico-primary-hover-border: #a5c8fc;
-    --pico-primary-focus: color-mix(in srgb, #89b4fa 55%, transparent);
-    --pico-primary: #11111b; --pico-primary-hover: #11111b; --pico-primary-inverse: #11111b;
+    --pico-background-color: #080b12; --pico-color: #e6ecf3;
+    --pico-h1-color: #e6ecf3; --pico-h2-color: #e6ecf3; --pico-h3-color: #e6ecf3; --pico-h4-color: #e6ecf3; --pico-h5-color: #e6ecf3; --pico-h6-color: #e6ecf3;
+    --pico-muted-color: #9aa4b8; --pico-muted-border-color: rgba(255,255,255,0.05);
+    --pico-card-background-color: #0f131e; --pico-card-border-color: rgba(255,255,255,0.09);
+    --pico-dropdown-hover-background-color: #171d2c;
+    --pico-form-element-background-color: #0d1220; --pico-form-element-border-color: rgba(255,255,255,0.09);
+    --pico-form-element-color: #e6ecf3; --pico-form-element-placeholder-color: #8494b3;
+    --pico-form-element-active-background-color: #0d1220; --pico-form-element-active-border-color: #2dd4bf;
+    --pico-form-element-focus-color: color-mix(in srgb, #2dd4bf 55%, transparent);
+    --pico-switch-background-color: rgba(255,255,255,0.09);
+    --pico-primary-background: #2dd4bf; --pico-primary-border: #2dd4bf;
+    --pico-primary-hover-background: #14b8a6; --pico-primary-hover-border: #14b8a6;
+    --pico-primary-focus: color-mix(in srgb, #2dd4bf 55%, transparent);
+    --pico-primary: #0a0f14; --pico-primary-hover: #0a0f14; --pico-primary-inverse: #0a0f14;
   }
   :root[data-os-theme="light"] .pico {
-    --pico-background-color: #ffffff; --pico-color: #1f2430;
-    --pico-h1-color: #1f2430; --pico-h2-color: #1f2430; --pico-h3-color: #1f2430; --pico-h4-color: #1f2430; --pico-h5-color: #1f2430; --pico-h6-color: #1f2430;
-    --pico-muted-color: #5b6472; --pico-muted-border-color: #e8eaee;
-    --pico-card-background-color: #f4f5f7; --pico-card-border-color: #d4d9e0;
-    --pico-dropdown-hover-background-color: #e8eaee;
-    --pico-form-element-background-color: #ffffff; --pico-form-element-border-color: #d4d9e0;
-    --pico-form-element-color: #1f2430; --pico-form-element-placeholder-color: #828da0;
-    --pico-form-element-active-background-color: #ffffff; --pico-form-element-active-border-color: #2563eb;
-    --pico-form-element-focus-color: color-mix(in srgb, #2563eb 45%, transparent);
-    --pico-primary-background: #2563eb; --pico-primary-border: #2563eb;
-    --pico-primary-hover-background: #1d4ed8; --pico-primary-hover-border: #1d4ed8;
-    --pico-primary-focus: color-mix(in srgb, #2563eb 45%, transparent);
+    --pico-background-color: #ffffff; --pico-color: #111827;
+    --pico-h1-color: #111827; --pico-h2-color: #111827; --pico-h3-color: #111827; --pico-h4-color: #111827; --pico-h5-color: #111827; --pico-h6-color: #111827;
+    --pico-muted-color: #4b5563; --pico-muted-border-color: #edf0f4;
+    --pico-card-background-color: #f5f6f8; --pico-card-border-color: rgba(0,0,0,0.13);
+    --pico-dropdown-hover-background-color: #edf0f4;
+    --pico-form-element-background-color: #ffffff; --pico-form-element-border-color: rgba(0,0,0,0.13);
+    --pico-form-element-color: #111827; --pico-form-element-placeholder-color: #5b6b82;
+    --pico-form-element-active-background-color: #ffffff; --pico-form-element-active-border-color: #0f766e;
+    --pico-form-element-focus-color: color-mix(in srgb, #0f766e 45%, transparent);
+    --pico-primary-background: #0f766e; --pico-primary-border: #0f766e;
+    --pico-primary-hover-background: #115e59; --pico-primary-hover-border: #115e59;
+    --pico-primary-focus: color-mix(in srgb, #0f766e 45%, transparent);
     --pico-primary: #ffffff; --pico-primary-hover: #ffffff; --pico-primary-inverse: #ffffff;
-    --pico-h1-color: #1f2430; --pico-h2-color: #1f2430; --pico-h3-color: #1f2430; --pico-h4-color: #1f2430; --pico-h5-color: #1f2430; --pico-h6-color: #1f2430;
+    --pico-h1-color: #111827; --pico-h2-color: #111827; --pico-h3-color: #111827; --pico-h4-color: #111827; --pico-h5-color: #111827; --pico-h6-color: #111827;
   }
   ::-webkit-scrollbar { width: 9px; height: 9px; }
   ::-webkit-scrollbar-thumb { background: var(--border-color); border-radius: 5px; border: 2px solid var(--bg-primary); }
@@ -154,8 +154,8 @@ window.__osSetTheme = function (t) { document.documentElement.dataset.osTheme = 
   }
   .pico .btn.ghost { background: transparent; color: var(--text-primary); border-color: var(--border-color); font-weight: 500; box-shadow: none; }
   .pico .btn.ghost:hover { background: var(--bg-tertiary); color: var(--text-primary); border-color: var(--border-color); }
-  .pico .btn.danger { background: #f38ba8; border-color: #f38ba8; color: #11111b; }
-  .pico .btn.danger:hover { background: #f5a3bd; border-color: #f5a3bd; }
+  .pico .btn.danger { background: #f87171; border-color: #f87171; color: #0a0f14; }
+  .pico .btn.danger:hover { background: #f87171; border-color: #f87171; }
   .pico .btn.small { padding: 2px 9px; font-size: 11.5px; }
   .pico .btn svg { width: 14px; height: 14px; flex: none; }
   .pico .icon-btn {
@@ -194,7 +194,7 @@ window.__osSetTheme = function (t) { document.documentElement.dataset.osTheme = 
   .conn-meta { flex: 1; min-width: 0; }
   .conn-name { display: block; font-size: 13px; font-weight: 550; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .conn-sub { display: block; font-size: 11px; color: var(--text-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-top: 1px; }
-  .conn-dot { width: 7px; height: 7px; border-radius: 50%; background: #a6e3a1; flex: none; }
+  .conn-dot { width: 7px; height: 7px; border-radius: 50%; background: #4ade80; flex: none; }
   .conn-item .icon-btn { opacity: 0; flex: none; }
   .conn-item:hover .icon-btn, .conn-item.active .icon-btn { opacity: 1; }
   .form-row label.check-row { display: flex; align-items: center; gap: 8px; font-weight: 500; color: var(--text-primary); cursor: pointer; }
@@ -254,20 +254,20 @@ window.__osSetTheme = function (t) { document.documentElement.dataset.osTheme = 
   .tasks { margin-top: 14px; border: 1px solid color-mix(in srgb, var(--border-color) 55%, transparent); border-radius: 10px; background: var(--bg-secondary); overflow: hidden; }
   .tasks-head { display: flex; align-items: center; gap: 8px; padding: 9px 12px; cursor: pointer; background: var(--bg-primary); font-weight: 600; font-size: 12.5px; }
   .tasks-head > svg { width: 15px; height: 15px; color: var(--text-secondary); }
-  .tasks-head .badge { background: var(--accent-color); color: #11111b; border-radius: 9px; padding: 0 7px; font-size: 11px; line-height: 17px; font-weight: 600; }
-  .tasks-head .badge.err { background: #f38ba8; }
+  .tasks-head .badge { background: var(--accent-color); color: #0a0f14; border-radius: 9px; padding: 0 7px; font-size: 11px; line-height: 17px; font-weight: 600; }
+  .tasks-head .badge.err { background: #f87171; }
   .task { padding: 8px 12px; border-top: 1px solid color-mix(in srgb, var(--border-color) 32%, transparent); }
   .task .t-row { display: flex; align-items: center; gap: 8px; }
   .task .t-ico { color: var(--text-secondary); display: inline-flex; }
   .task .t-ico svg { width: 14px; height: 14px; }
   .task .t-name { flex: 1; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
   .task .t-status { font-size: 11.5px; color: var(--text-secondary); white-space: nowrap; }
-  .task .t-status.failed { color: #f38ba8; }
-  .task .t-status.done { color: #a6e3a1; }
+  .task .t-status.failed { color: #f87171; }
+  .task .t-status.done { color: #4ade80; }
   .bar { height: 4px; border-radius: 2px; background: var(--bg-primary); margin-top: 7px; overflow: hidden; }
   .bar > i { display: block; height: 100%; background: var(--accent-color); border-radius: 2px; transition: width .15s; }
-  .bar > i.failed { background: #f38ba8; }
-  .bar > i.done { background: #a6e3a1; }
+  .bar > i.failed { background: #f87171; }
+  .bar > i.done { background: #4ade80; }
 
   .mask { position: fixed; inset: 0; background: rgba(0,0,0,.52); display: flex; align-items: center; justify-content: center; z-index: 50; }
   .modal { background: var(--bg-primary); border: 1px solid color-mix(in srgb, var(--border-color) 70%, transparent); border-radius: 12px; width: 520px; max-width: 94vw; max-height: 92vh; overflow-y: auto; padding: 18px; box-shadow: 0 16px 40px rgba(0,0,0,.35); }
@@ -280,8 +280,8 @@ window.__osSetTheme = function (t) { document.documentElement.dataset.osTheme = 
   .modal input:not([type="checkbox"]), .modal select { height: 34px; min-height: 34px; padding: 0 10px; font-size: 13px; margin-bottom: 0; }
   .modal .form-row { margin-bottom: 9px; }
   .modal .form-row label { margin-bottom: 4px; }
-  .err-text { color: #f38ba8; font-size: 12.5px; white-space: pre-wrap; word-break: break-all; }
-  .ok-text { color: #a6e3a1; font-size: 12.5px; }
+  .err-text { color: #f87171; font-size: 12.5px; white-space: pre-wrap; word-break: break-all; }
+  .ok-text { color: #4ade80; font-size: 12.5px; }
 
   .preview-body { display: flex; align-items: center; justify-content: center; min-height: 300px; }
   .preview-body img { max-width: 100%; max-height: 66vh; border-radius: 6px; }
@@ -293,7 +293,7 @@ window.__osSetTheme = function (t) { document.documentElement.dataset.osTheme = 
   .md-body a { color: var(--accent-color); }
   .md-body table { border-collapse: collapse; margin: 8px 0; }
   .md-body td, .md-body th { border: 1px solid var(--border-color); padding: 4px 9px; }
-  #glCanvas { width: 100%; height: 56vh; background: #181825; border-radius: 8px; touch-action: none; }
+  #glCanvas { width: 100%; height: 56vh; background: #0f131e; border-radius: 8px; touch-action: none; }
   .toast {
     position: fixed; left: 50%; bottom: 22px; transform: translateX(-50%) translateY(20px);
     background: var(--bg-tertiary); color: var(--text-primary);
@@ -340,9 +340,28 @@ window.__osSetTheme = function (t) { document.documentElement.dataset.osTheme = 
   .stat-card .v { font-size: 17px; font-weight: 650; }
   .stat-card .k { font-size: 11px; color: var(--text-secondary); margin-top: 2px; }
   .regex-marks { white-space: pre-wrap; word-break: break-all; font-family: var(--font-mono); font-size: 12.5px; line-height: 1.7; background: var(--bg-primary); border-radius: 8px; padding: 10px 12px; }
-  .regex-marks mark { background: color-mix(in srgb, #f9e2af 55%, transparent); color: inherit; border-radius: 2px; padding: 0 1px; }
-  :root[data-os-theme="dark"] .regex-marks mark { background: color-mix(in srgb, #f9e2af 35%, transparent); }
+  .regex-marks mark { background: color-mix(in srgb, #fbbf24 55%, transparent); color: inherit; border-radius: 2px; padding: 0 1px; }
+  :root[data-os-theme="dark"] .regex-marks mark { background: color-mix(in srgb, #fbbf24 35%, transparent); }
 
+
+  /* ===== 精修层：对齐宿主 NewShell 设计语言（青绿强调 / 紧凑密度 / 发丝线） ===== */
+  :root { --danger-color: #f87171; --success-color: #4ade80; --warning-color: #fbbf24; --info-color: #60a5fa; }
+  :root[data-os-theme="light"] { --danger-color: #dc2626; --success-color: #15803d; --warning-color: #b45309; --info-color: #2563eb; }
+  body { font-family: 'DM Sans Variable', 'DM Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', 'Noto Sans SC', system-ui, sans-serif; }
+  .mono, code, kbd { font-family: 'JetBrains Mono Variable', 'JetBrains Mono', ui-monospace, 'SF Mono', Consolas, 'Microsoft YaHei', monospace; }
+  .pico .btn { height: 30px; padding: 0 12px; border-radius: 6px; font-size: 12.5px; line-height: 1; font-weight: 550; flex: none; box-shadow: none; transition: background-color .15s cubic-bezier(.4, 0, .2, 1), border-color .15s cubic-bezier(.4, 0, .2, 1), color .15s cubic-bezier(.4, 0, .2, 1); }
+  .pico .btn.small { height: 26px; padding: 0 9px; font-size: 11.5px; }
+  .pico .btn.danger { background: color-mix(in srgb, var(--danger-color) 13%, transparent); border-color: color-mix(in srgb, var(--danger-color) 32%, transparent); color: var(--danger-color); }
+  .pico .btn.danger:hover { background: color-mix(in srgb, var(--danger-color) 22%, transparent); border-color: color-mix(in srgb, var(--danger-color) 45%, transparent); color: var(--danger-color); }
+  .pico .gl-tab { height: 28px; padding: 0 13px; display: inline-flex; align-items: center; flex: none; transition: background-color .15s, color .15s, border-color .15s; }
+  .pico .gl-tab.active { background: color-mix(in srgb, var(--accent-color) 14%, transparent); border-color: color-mix(in srgb, var(--accent-color) 42%, transparent); color: var(--accent-color); }
+  :root[data-os-theme="light"] .pico .gl-tab.active { color: var(--accent-color); }
+  .pico .nav-item.active { background: color-mix(in srgb, var(--accent-color) 12%, transparent); border-color: color-mix(in srgb, var(--accent-color) 35%, transparent); color: var(--accent-color); }
+  .conn-item.active { background: color-mix(in srgb, var(--accent-color) 9%, transparent); }
+  .bucket-item.active { background: color-mix(in srgb, var(--accent-color) 12%, transparent); color: var(--accent-color); }
+  .pico input:not([type="checkbox"]):not([type="radio"]):not([type="file"]), .pico select { height: 32px; padding-top: 0; padding-bottom: 0; border-radius: 6px; font-size: 13px; }
+  .pico textarea { border-radius: 6px; font-size: 13px; }
+  .pico .icon-btn { flex: none; }
 </style>
 </head>
 <body class="pico">

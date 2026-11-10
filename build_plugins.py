@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""构建三个插件的 index.html 并重新打包 zip。
+"""构建四个插件的 index.html 并重新打包 zip。
 
 index.src.html 中的占位符是整段 HTML 注释，构建时须整段替换，规则分两类：
   未被标签包裹（PICO/VUE）：整段注释换成带标签的块
@@ -19,7 +19,7 @@ import sys
 import zipfile
 
 ROOT = os.path.dirname(os.path.abspath(__file__))
-PLUGINS = ['dev-toolbox', 'gitlab-console', 'kafka-studio']
+PLUGINS = ['dev-toolbox', 'gitlab-console', 'kafka-studio', 'object-storage']
 
 PICO_HEAD = '/* Pico.css v2.0.6 (MIT) inline copy of vendor/pico.conditional.min.css */'
 VUE_HEAD = '/* Vue 3.5.13 (MIT) inline copy of vendor/vue.global.prod.js */'
@@ -37,18 +37,16 @@ def build(pid):
                         '<script>\n' + VUE_HEAD + '\n' + read(pid, 'vendor/vue.global.prod.js') + '\n</script>')
     if '<!-- __LIB_JS__ -->' in html:
         html = html.replace('<!-- __LIB_JS__ -->', read(pid, 'lib.js'))
-    html = html.replace('<!-- __APP_JS__ -->', read(pid, 'app.js'))
+    if '<!-- __APP_JS__ -->' in html:
+        html = html.replace('<!-- __APP_JS__ -->', read(pid, 'app.js'))
     for token in ('__PICO_CSS__', '__VUE_JS__', '__APP_JS__', '__LIB_JS__'):
         assert token not in html, f'{pid}: placeholder {token} left'
     out = os.path.join(ROOT, pid, 'index.html')
     io.open(out, 'w', encoding='utf-8').write(html)
     print(pid, 'index.html bytes', len(html.encode('utf-8')))
 
-    members = ['manifest.json', 'index.html', 'index.src.html', 'app.js', 'README.md']
-    if os.path.exists(os.path.join(ROOT, pid, 'main.js')):
-        members.append('main.js')
-    if os.path.exists(os.path.join(ROOT, pid, 'lib.js')):
-        members.append('lib.js')
+    candidates = ['manifest.json', 'index.html', 'index.src.html', 'app.js', 'README.md', 'main.js', 'lib.js']
+    members = [m for m in candidates if os.path.exists(os.path.join(ROOT, pid, m))]
     manifest = io.open(os.path.join(ROOT, pid, 'manifest.json'), encoding='utf-8').read()
     import json
     version = json.loads(manifest)['version']
