@@ -88,12 +88,6 @@
       ],
       "versions": [
         {
-          "version": "1.0.0",
-          "downloadUrl": "https://raw.githubusercontent.com/xyl912158708/newshell-plugin-registry/main/plugins/object-storage/object-storage-v1.0.0.zip",
-          "minAppVersion": "1.2.0",
-          "releaseDate": "2026-11-09"
-        },
-        {
           "version": "1.2.1",
           "downloadUrl": "https://raw.githubusercontent.com/xyl912158708/newshell-plugin-registry/main/plugins/object-storage/object-storage-v1.2.1.zip",
           "minAppVersion": "1.2.0",
