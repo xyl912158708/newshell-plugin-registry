@@ -5,7 +5,7 @@ const PROXY = 'http://127.0.0.1:17933'
 const storeBridge = {
   req(action, payload) {
     return new Promise((resolve, reject) => {
-      const requestId = Math.floor(Math.random() * 1e9) + 1
+      const requestId = 'r' + Date.now().toString(36) + Math.floor(Math.random() * 1e9).toString(36)
       const handler = (ev) => {
         const d = ev.data
         if (!d || d.type !== 'newshell:plugin-action-response' || d.requestId !== requestId) return
@@ -103,7 +103,7 @@ const App = {
       try { storeBridge.set('lastConnId', id) } catch (_) {}
       sr.subjects = []; msg.records = []
     }
-    async function persistConns() { try { await storeBridge.set('connections', connections.value) } catch (_) {} }
+    async function persistConns() { try { await storeBridge.set('connections', connections.value); return true } catch (_) { return false } }
     function openEditor(c) {
       Object.assign(editor, { open: true, id: c ? c.id : '', name: c ? c.name : '', brokers: c ? c.brokers : '127.0.0.1:9092', clientId: c ? (c.clientId || 'newshell-kafka-studio') : 'newshell-kafka-studio', saslUser: c ? (c.saslUser || '') : '', saslPass: c ? (c.saslPass || '') : '', srUrl: c ? (c.srUrl || '') : '', testing: false, testMsg: '', testOk: false })
     }
@@ -122,7 +122,7 @@ const App = {
       const data = { name: editor.name.trim(), brokers: editor.brokers.trim(), clientId: editor.clientId.trim(), saslUser: editor.saslUser.trim(), saslPass: editor.saslPass, srUrl: editor.srUrl.trim().replace(/\/+$/, '') }
       if (editor.id) { const c = connections.value.find((x) => x.id === editor.id); if (c) Object.assign(c, data) }
       else { const id = 'k' + Date.now().toString(36); connections.value.push(Object.assign({ id }, data)); connId.value = id }
-      await persistConns()
+      if (!(await persistConns())) return toast('保存失败：宿主未响应，连接未写入存储，请稍后重试')
       editor.open = false
       if (editor.id === connId.value) disconnect()
       toast('连接已保存')

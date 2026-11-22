@@ -422,6 +422,16 @@ body { letter-spacing: .01em; -webkit-font-smoothing: antialiased; text-renderin
 .app-root .el-message { border-radius: var(--ns-radius-m); box-shadow: var(--ns-shadow-2); }
 .app-root .el-empty { padding: 28px 0; }
 
+/* ---------- 9.4 控件高度统一（修复输入框/按钮同排高度不一） ----------
+ * EP 控件高度由 --el-component-size（默认 32）与 --el-component-size-small
+ * （24）两档变量驱动，而按钮此前被本系统单独钉在 30px，造成同排
+ * 输入框 24/32 与按钮 30 三种高度并存。此处在 body 层把两档 EP 尺寸
+ * 变量统一到 --ns-control-h（30）：输入框/下拉/数字步进/分页等所有
+ * EP 控件与按钮同高；body 层声明对 teleport 到 body 的弹窗/下拉同样
+ * 生效（继承取最近祖先）。分段选择器高度是字面量，单独对齐。 */
+body { --el-component-size: var(--ns-control-h); --el-component-size-small: var(--ns-control-h); }
+.app-root .el-segmented, .app-root .el-segmented--small { min-height: var(--ns-control-h); }
+
 /* ---------- 9.5 加载 / 空状态 / 反馈的统一规格 ---------- */
 .app-root .el-loading-mask { background: color-mix(in srgb, var(--el-bg-color-page) 74%, transparent); }
 .app-root .el-loading-spinner .path { stroke: var(--el-color-primary); }

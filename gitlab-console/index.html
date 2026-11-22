@@ -428,6 +428,16 @@ body { letter-spacing: .01em; -webkit-font-smoothing: antialiased; text-renderin
 .app-root .el-message { border-radius: var(--ns-radius-m); box-shadow: var(--ns-shadow-2); }
 .app-root .el-empty { padding: 28px 0; }
 
+/* ---------- 9.4 控件高度统一（修复输入框/按钮同排高度不一） ----------
+ * EP 控件高度由 --el-component-size（默认 32）与 --el-component-size-small
+ * （24）两档变量驱动，而按钮此前被本系统单独钉在 30px，造成同排
+ * 输入框 24/32 与按钮 30 三种高度并存。此处在 body 层把两档 EP 尺寸
+ * 变量统一到 --ns-control-h（30）：输入框/下拉/数字步进/分页等所有
+ * EP 控件与按钮同高；body 层声明对 teleport 到 body 的弹窗/下拉同样
+ * 生效（继承取最近祖先）。分段选择器高度是字面量，单独对齐。 */
+body { --el-component-size: var(--ns-control-h); --el-component-size-small: var(--ns-control-h); }
+.app-root .el-segmented, .app-root .el-segmented--small { min-height: var(--ns-control-h); }
+
 /* ---------- 9.5 加载 / 空状态 / 反馈的统一规格 ---------- */
 .app-root .el-loading-mask { background: color-mix(in srgb, var(--el-bg-color-page) 74%, transparent); }
 .app-root .el-loading-spinner .path { stroke: var(--el-color-primary); }
@@ -581,7 +591,7 @@ const PROXY = 'http://127.0.0.1:17932'
 const storeBridge = {
   req(action, payload) {
     return new Promise((resolve, reject) => {
-      const requestId = Math.floor(Math.random() * 1e9) + 1
+      const requestId = 'r' + Date.now().toString(36) + Math.floor(Math.random() * 1e9).toString(36)
       const handler = (ev) => {
         const d = ev.data
         if (!d || d.type !== 'newshell:plugin-action-response' || d.requestId !== requestId) return
@@ -704,7 +714,7 @@ const App = {
       }
       return r
     }
-    async function persistConns() { try { await storeBridge.set('connections', connections.value) } catch (_) {} }
+    async function persistConns() { try { await storeBridge.set('connections', connections.value); return true } catch (_) { return false } }
     function openEditor(c) {
       Object.assign(editor, { open: true, id: c ? c.id : '', name: c ? c.name : '', baseUrl: c ? c.baseUrl : 'https://gitlab.com', token: c ? c.token : '', allowInsecure: c ? !!c.allowInsecure : false, testing: false, testMsg: '', testOk: false })
     }
@@ -723,7 +733,7 @@ const App = {
       const data = { name: editor.name.trim(), baseUrl: editor.baseUrl.trim().replace(/\/+$/, ''), token: editor.token.trim(), allowInsecure: editor.allowInsecure }
       if (editor.id) { const c = connections.value.find((x) => x.id === editor.id); if (c) Object.assign(c, data) }
       else { const id = 'c' + Date.now().toString(36); connections.value.push(Object.assign({ id }, data)); connId.value = id }
-      await persistConns()
+      if (!(await persistConns())) return toast('保存失败：宿主未响应，连接未写入存储，请稍后重试')
       editor.open = false
       toast('连接已保存')
       if (connId.value) selectConnection(connId.value, true)
