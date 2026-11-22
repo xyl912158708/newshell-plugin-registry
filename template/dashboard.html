@@ -40,7 +40,7 @@
 </head>
 <body>
   <ui-page>
-    <ui-page-header title="📋 Template Dashboard" description="此区域由插件占据，可以用于显示自定义内容——如 API 管理、监控面板等。"></ui-page-header>
+    <ui-page-header title="Template Dashboard" description="此区域由插件占据，可以用于显示自定义内容——如 API 管理、监控面板等。"></ui-page-header>
 
     <p class="sdk-status">
       当前主题：<span class="value" id="themeName">-</span> ·
@@ -49,22 +49,22 @@
 
     <div class="card-grid">
       <ui-card>
-        <div class="card-icon">🔌</div>
+        <div class="card-icon"><ui-icon name="link" size="26"></ui-icon></div>
         <div class="card-title">注册连接类型</div>
         <div class="card-desc">通过 connection.registerType() 注册自定义协议处理</div>
       </ui-card>
       <ui-card>
-        <div class="card-icon">📊</div>
+        <div class="card-icon"><ui-icon name="copy" size="26"></ui-icon></div>
         <div class="card-title">面板标签</div>
         <div class="card-desc">通过 manifest 的 sidePanelTabs / rightPanelTabs 添加侧边面板</div>
       </ui-card>
       <ui-card>
-        <div class="card-icon">🖥️</div>
+        <div class="card-icon"><ui-icon name="home" size="26"></ui-icon></div>
         <div class="card-title">主页渲染</div>
         <div class="card-desc">通过 manifest 的 toolPages + renderer 占据终端主区域</div>
       </ui-card>
       <ui-card>
-        <div class="card-icon">💾</div>
+        <div class="card-icon"><ui-icon name="database" size="26"></ui-icon></div>
         <div class="card-title">持久化存储</div>
         <div class="card-desc">通过 plugin.storage 读写键值对，支持 JSON 数据</div>
       </ui-card>

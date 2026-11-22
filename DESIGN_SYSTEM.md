@@ -55,3 +55,29 @@
 - gitlab-console 1.2.1 → 1.3.0
 - kafka-studio 1.2.2 → 1.3.0
 - object-storage 1.3.1 → 1.4.0
+
+## 2026-11-22 第二轮：按宿主插件模块变更统一同步
+
+宿主侧变更（feature/plugin-optimization 至 b1b2f28）：scheme 注册为
+privileged（642f3f0，`_sdk/` 脚本在真机恢复加载、插件 origin 恢复为
+`newshell-plugin://<id>`）、更新加载失败不再误标 loaded（7c80f27）、
+Plugin UI SDK 统一能力审计（0d3a604：图标收口 ui-icon、七表单控件
+invalid 错误态、data-table 空/加载复用 ui-empty/ui-loading、
+plugin-ui.js 重建；plugin-api.js 仍为 0.2.0 未变）。
+
+各插件处置（逐个核对后执行，无变化不虚升版本）：
+
+- **template 1.0.1 → 1.0.2**：页内图标按新统一图标体系收口——六个页面
+  里以 emoji/字符充当的图标（📋📊📌📡🔌🖥️💾📦✅🔍💡✕ 共 13 处）全部
+  换成 `<ui-icon>`（link/copy/home/database/arrow-left/arrow-right/
+  upload/circle-check/search/info/file/check/x）；manifest 的贡献点
+  icon 是宿主侧栏的既定机制（各插件皆用 emoji），不在此列、保留。
+- **EP 四插件（1.3.0/1.4.0）**：只经 `_sdk/plugin-api.js` 用主题通道，
+  该文件本轮未变、引用名未变，逐个复核引用 intact；EP 组件自动受益于
+  宿主 scheme 修复。不改、不升版本。
+- **goshell 1.1.2**：刚发布，只加载 plugin-ui.js，其 ui-button/input/
+  checkbox 自动获得新版组件内部（图标/错误态等），页面无需改；其页面
+  CSS 中 `--ui-*` 的深色 hex 回退值是 SDK 不可用时的降级底色，作为
+  保留例外记录（与 SDK 审计的「内部几何保留」同性质）。不改、不升版本。
+- **test-panel 1.0.0**：旧 API 兼容夹具，按设计不迁移；scheme 修复后
+  其页面恢复正常加载。不改。
