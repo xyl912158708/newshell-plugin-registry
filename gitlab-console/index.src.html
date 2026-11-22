@@ -20,6 +20,9 @@ window.__osSetTheme = function (t) { document.documentElement.dataset.osTheme = 
   function apply(snap) {
     if (!snap || snap.stale) return
     window.__osSetTheme(snap.sdkTheme === 'light' ? 'light' : 'dark')
+    // 高对比第三档：sdkTheme 只给明暗基底，原始 theme 判 HC 并打 html.hc 标记，
+    // 由统一设计系统（NS-DS）的 html.hc 覆盖层提供强边框/纯色文本/高亮主色。
+    document.documentElement.classList.toggle('hc', snap.theme === 'high-contrast')
   }
   apply(api.theme.get())
   api.theme.onChange(apply)
@@ -418,6 +421,39 @@ body { letter-spacing: .01em; -webkit-font-smoothing: antialiased; text-renderin
 .app-root .el-tag { border-radius: 6px; font-weight: 550; }
 .app-root .el-message { border-radius: var(--ns-radius-m); box-shadow: var(--ns-shadow-2); }
 .app-root .el-empty { padding: 28px 0; }
+
+/* ---------- 9.5 加载 / 空状态 / 反馈的统一规格 ---------- */
+.app-root .el-loading-mask { background: color-mix(in srgb, var(--el-bg-color-page) 74%, transparent); }
+.app-root .el-loading-spinner .path { stroke: var(--el-color-primary); }
+.app-root .el-empty .el-empty__description p { color: var(--el-text-color-secondary); font-size: 12.5px; }
+.app-root .el-message { border-radius: var(--ns-radius-m); box-shadow: var(--ns-shadow-2); padding: 10px 14px; }
+.app-root .el-notification { border-radius: var(--ns-radius-l); box-shadow: var(--ns-shadow-2); }
+
+/* ---------- 9.6 高对比第三档（html.hc） ----------
+ * 宿主 theme=high-contrast 时，各插件主题跟随片段给 <html> 打 .hc 标记
+ * （基底仍为 dark：sdkTheme 折算）。此处在 dark 令牌之上叠加 HC 覆盖：
+ * 主色对齐宿主 HC 令牌 #00ffff、边框大幅提强、文本纯白、焦点环加粗。
+ * 与 html.dark 同特异性，靠本段在样式表中的靠后位置生效。 */
+html.hc {
+  --el-color-primary: #00ffff;
+  --el-color-primary-light-3: #00c9c9; --el-color-primary-light-5: #009a9a;
+  --el-color-primary-light-7: #006b6b; --el-color-primary-light-8: #004d4d;
+  --el-color-primary-light-9: #06333a; --el-color-primary-dark-2: #66ffff;
+  --el-text-color-primary: #ffffff; --el-text-color-regular: #eef2f8;
+  --el-text-color-secondary: #c3cede; --el-text-color-placeholder: #93a5bd;
+  --el-border-color: rgba(255, 255, 255, .55); --el-border-color-light: rgba(255, 255, 255, .45);
+  --el-border-color-lighter: rgba(255, 255, 255, .35); --el-border-color-extra-light: rgba(255, 255, 255, .2);
+  --accent-color: #00ffff; --border-color: rgba(255, 255, 255, .45);
+  --ns-ring: 0 0 0 3px rgba(0, 255, 255, .45);
+}
+html.hc .el-button--primary {
+  --el-button-text-color: #000000; --el-button-hover-text-color: #000000; --el-button-active-text-color: #000000;
+  font-weight: 650;
+}
+html.hc :focus-visible { outline: 3px solid #00ffff; outline-offset: 2px; }
+html.hc .app-root .conn-item.active, html.hc .app-root .bucket-item.active,
+html.hc .app-root .nav-item.active { box-shadow: inset 4px 0 0 #00ffff; }
+html.hc .app-root .main-tabs .el-tabs__item.is-active { box-shadow: inset 0 0 0 2px #00ffff; }
 
 /* ---------- 9. 状态栏（层级第四段） ---------- */
 .ns-statusbar {

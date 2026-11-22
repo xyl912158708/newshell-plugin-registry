@@ -81,3 +81,37 @@ plugin-ui.js 重建；plugin-api.js 仍为 0.2.0 未变）。
   保留例外记录（与 SDK 审计的「内部几何保留」同性质）。不改、不升版本。
 - **test-panel 1.0.0**：旧 API 兼容夹具，按设计不迁移；scheme 修复后
   其页面恢复正常加载。不改。
+
+## 2026-11-22 第三轮：EP 四插件按宿主五条统一标准补齐
+
+用户明确 EP 四插件也要按宿主统一能力五条动。逐条处置（版本：
+dev-toolbox/gitlab-console/kafka-studio 1.3.0 → 1.3.1，
+object-storage 1.4.0 → 1.4.1）：
+
+1. **共享组件**：四插件同为 Vue + Element Plus 栈，按钮/输入/下拉/卡片
+   本就全量用 EP 组件（原生控件命中 0）；本轮再统一 EP 全局配置
+   `app.use(ElementPlus, { size: 'small' })`，未显式写尺寸的控件（多在
+   弹窗表单）与各插件工具栏既定小尺寸密度对齐。自绘件（连接项/行列表/
+   统计卡等）继续由 NS-DS 同名类统一，不另造组件。
+2. **间距/字体/颜色/边框/圆角**：已由 NS-DS 令牌层统一（第一轮）；
+   各插件自有 CSS 中残留的圆角字面量（8px×23、7px×11 等）属插件内部
+   几何（头像/小徽标/代码块），按 SDK 审计同一口径列为保留项，
+   共享组件的圆角已全部由 NS-DS 覆盖。
+3. **三档主题（本轮重点）**：此前 HC 被 sdkTheme 折算成 dark、只有两档
+   观感。本轮主题跟随片段改用快照原始 `theme` 判 HC 并给 `<html>` 打
+   `.hc` 标记；NS-DS 新增 `html.hc` 覆盖层：主色对齐宿主 HC 令牌
+   `#00ffff`、边框提强至 .35–.55 白、文本纯白、焦点环 3px、选中指示
+   加粗、主按钮黑字加粗。明/暗/HC 三档从此在 EP 插件里真实可分。
+4. **统一图标**：字符图标清零——kafka 记录展开 `▾/▸` 换 EP 图标
+   ArrowDown/ArrowRight；object-storage 任务折叠 `▾/▸` 换同套 SVG
+   chevron（I 集补 chevD/chevR）、`↻ 重试` 去字符、预览加载 `⏳`
+   换 refresh SVG + spin。dev/gitlab 本无字符图标。
+5. **加载/错误/空状态/反馈**：ElMessage 规格统一为 duration 2600 +
+   grouping（原 2200/2600/2600/2800 不一）；NS-DS 统一 el-loading
+   遮罩与转圈主色、el-empty 描述规格、el-message/notification
+   圆角与阴影。空状态各插件已统一用 ElEmpty（kafka/gitlab）或
+   NS-DS 同规格的 .side-empty/.list-empty（dev/object）。
+
+校验：四插件 app.js 与 object 内联脚本语法过；构建产物 NS-DS 段仍
+逐字节一致且含 html.hc 层；zip 内 manifest 版本核对过。HC 与小尺寸
+弹窗的真实观感待真机验（沙箱无渲染截图条件，同前两轮）。

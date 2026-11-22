@@ -616,7 +616,7 @@ const TB_ICONS = window.EP_ICONS || {}
 const App = {
   setup() {
     const uiTheme = ref('dark')
-    toastFn = (msg) => { try { ElementPlus.ElMessage({ message: msg, duration: 2200, grouping: true }) } catch (_) {} }
+    toastFn = (msg) => { try { ElementPlus.ElMessage({ message: msg, duration: 2600, grouping: true }) } catch (_) {} }
     const activeId = ref('hash')
     const query = ref('')
     const nowText = ref('')
@@ -683,5 +683,5 @@ const App = {
   }
 }
 const app = createApp(App)
-app.use(ElementPlus)
+app.use(ElementPlus, { size: 'small' })
 app.mount('#app')

@@ -402,7 +402,7 @@ const App = {
               h('span', { class: 'mono rec-offset' }, '#' + rec.offset),
               h('span', { class: 'muted' }, fmtTime(rec.timestamp)),
               h('span', { class: 'mono rec-preview' }, 'key: ' + decodeBytes(rec.key, 'text').slice(0, 60) + ' · ' + decodeBytes(rec.value, msg.decode === 'json' ? 'text' : msg.decode).replace(/\s+/g, ' ').slice(0, 90)),
-              h('span', { class: 'rec-caret' }, expanded ? '▾' : '▸')
+              h('span', { class: 'rec-caret' }, [h(expanded ? I.ArrowDown : I.ArrowRight, { size: 12 })])
             ]),
             expanded ? h('div', { class: 'rec-body' }, [
               h('div', { class: 'block-label' }, 'Key'), h('pre', { class: 'rec-pre' }, decodeBytes(rec.key, msg.decode)),
@@ -598,5 +598,5 @@ const App = {
   }
 }
 const app = createApp(App)
-app.use(ElementPlus)
+app.use(ElementPlus, { size: 'small' })
 app.mount('#app')

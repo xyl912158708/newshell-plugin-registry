@@ -22,6 +22,9 @@ window.__osSetTheme = function (t) { document.documentElement.dataset.osTheme = 
   function apply(snap) {
     if (!snap || snap.stale) return
     window.__osSetTheme(snap.sdkTheme === 'light' ? 'light' : 'dark')
+    // 高对比第三档：sdkTheme 只给明暗基底，原始 theme 判 HC 并打 html.hc 标记，
+    // 由统一设计系统（NS-DS）的 html.hc 覆盖层提供强边框/纯色文本/高亮主色。
+    document.documentElement.classList.toggle('hc', snap.theme === 'high-contrast')
   }
   apply(api.theme.get())
   api.theme.onChange(apply)
@@ -453,6 +456,39 @@ body { letter-spacing: .01em; -webkit-font-smoothing: antialiased; text-renderin
 .app-root .el-message { border-radius: var(--ns-radius-m); box-shadow: var(--ns-shadow-2); }
 .app-root .el-empty { padding: 28px 0; }
 
+/* ---------- 9.5 加载 / 空状态 / 反馈的统一规格 ---------- */
+.app-root .el-loading-mask { background: color-mix(in srgb, var(--el-bg-color-page) 74%, transparent); }
+.app-root .el-loading-spinner .path { stroke: var(--el-color-primary); }
+.app-root .el-empty .el-empty__description p { color: var(--el-text-color-secondary); font-size: 12.5px; }
+.app-root .el-message { border-radius: var(--ns-radius-m); box-shadow: var(--ns-shadow-2); padding: 10px 14px; }
+.app-root .el-notification { border-radius: var(--ns-radius-l); box-shadow: var(--ns-shadow-2); }
+
+/* ---------- 9.6 高对比第三档（html.hc） ----------
+ * 宿主 theme=high-contrast 时，各插件主题跟随片段给 <html> 打 .hc 标记
+ * （基底仍为 dark：sdkTheme 折算）。此处在 dark 令牌之上叠加 HC 覆盖：
+ * 主色对齐宿主 HC 令牌 #00ffff、边框大幅提强、文本纯白、焦点环加粗。
+ * 与 html.dark 同特异性，靠本段在样式表中的靠后位置生效。 */
+html.hc {
+  --el-color-primary: #00ffff;
+  --el-color-primary-light-3: #00c9c9; --el-color-primary-light-5: #009a9a;
+  --el-color-primary-light-7: #006b6b; --el-color-primary-light-8: #004d4d;
+  --el-color-primary-light-9: #06333a; --el-color-primary-dark-2: #66ffff;
+  --el-text-color-primary: #ffffff; --el-text-color-regular: #eef2f8;
+  --el-text-color-secondary: #c3cede; --el-text-color-placeholder: #93a5bd;
+  --el-border-color: rgba(255, 255, 255, .55); --el-border-color-light: rgba(255, 255, 255, .45);
+  --el-border-color-lighter: rgba(255, 255, 255, .35); --el-border-color-extra-light: rgba(255, 255, 255, .2);
+  --accent-color: #00ffff; --border-color: rgba(255, 255, 255, .45);
+  --ns-ring: 0 0 0 3px rgba(0, 255, 255, .45);
+}
+html.hc .el-button--primary {
+  --el-button-text-color: #000000; --el-button-hover-text-color: #000000; --el-button-active-text-color: #000000;
+  font-weight: 650;
+}
+html.hc :focus-visible { outline: 3px solid #00ffff; outline-offset: 2px; }
+html.hc .app-root .conn-item.active, html.hc .app-root .bucket-item.active,
+html.hc .app-root .nav-item.active { box-shadow: inset 4px 0 0 #00ffff; }
+html.hc .app-root .main-tabs .el-tabs__item.is-active { box-shadow: inset 0 0 0 2px #00ffff; }
+
 /* ---------- 9. 状态栏（层级第四段） ---------- */
 .ns-statusbar {
   flex: none; height: 30px; display: flex; align-items: center; gap: 16px;
@@ -521,7 +557,9 @@ const I = {
   swap: svgIcon('<path d="M17 1l4 4-4 4"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><path d="M7 23l-4-4 4-4"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/>', 14),
   up: svgIcon('<path d="M12 19V5"/><path d="M5 12l7-7 7 7"/>', 14),
   down: svgIcon('<path d="M12 5v14"/><path d="M19 12l-7 7-7-7"/>', 14),
-  copy: svgIcon('<rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>', 14)
+  copy: svgIcon('<rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>', 14),
+  chevD: svgIcon('<path d="M6 9l6 6 6-6"/>', 14),
+  chevR: svgIcon('<path d="M9 6l6 6-6 6"/>', 14)
 }
 
 const app = createApp({
@@ -592,7 +630,7 @@ const app = createApp({
       return m
     }
     function toast(msg) {
-      try { ElementPlus.ElMessage({ message: humanizeError(msg), duration: 2800, grouping: true }) } catch (_) { toastText.value = humanizeError(msg) }
+      try { ElementPlus.ElMessage({ message: humanizeError(msg), duration: 2600, grouping: true }) } catch (_) { toastText.value = humanizeError(msg) }
     }
     function fmtSize(n) {
       if (n == null) return '-'
@@ -1537,7 +1575,7 @@ const app = createApp({
               failedTasks.value ? h('span', { class: ['badge', 'err'] }, `${failedTasks.value} 失败`) : null,
               h('span', { style: { flex: 1 } }),
               h(ElButton, { text: true, size: 'small', onClick: (e) => { e.stopPropagation(); clearFinishedTasks() } }, () => '清除已完成'),
-              h('span', tasksOpen.value ? '▾' : '▸')
+              h('span', { class: 'btn-ico', innerHTML: tasksOpen.value ? I.chevD : I.chevR })
             ]),
             h('div', { style: { display: tasksOpen.value ? '' : 'none' } },
               tasks.value.length ? tasks.value.map((t) => h('div', { class: 'task', key: t.id }, [
@@ -1546,7 +1584,7 @@ const app = createApp({
                   h('span', { class: 't-name', title: t.key || t.name }, t.name),
                   h('span', { class: ['t-status', t.status] }, taskStatusText(t)),
                   t.status === 'running' ? h(ElButton, { size: 'small', text: true, onClick: () => cancelTask(t) }, () => '取消') : null,
-                  t.status === 'failed' ? h(ElButton, { size: 'small', type: 'primary', onClick: () => retryTask(t) }, () => '↻ 重试') : null,
+                  t.status === 'failed' ? h(ElButton, { size: 'small', type: 'primary', onClick: () => retryTask(t) }, () => '重试') : null,
                   t.status !== 'running' ? h(ElButton, { size: 'small', text: true, onClick: () => removeTask(t) }, () => '移除') : null
                 ]),
                 h(ElProgress, { percentage: taskPct(t), status: t.status === 'failed' ? 'exception' : t.status === 'done' ? 'success' : undefined, showText: false, strokeWidth: 5 })
@@ -1607,7 +1645,7 @@ const app = createApp({
       })
     }
     function renderPreviewBody() {
-      if (preview.loading) return h('span', [h('span', { class: 'spin' }, '⏳'), ' 加载中…'])
+      if (preview.loading) return h('span', [h('span', { class: 'spin btn-ico', innerHTML: I.refresh }), '加载中…'])
       if (preview.error) return h('div', { class: 'err-text' }, '预览失败：' + preview.error)
       if (preview.kind === 'image') return h('img', { src: preview.url, alt: '' })
       if (preview.kind === 'text') return h('pre', preview.text)
@@ -1684,7 +1722,7 @@ const app = createApp({
     return renderRoot
   }
 })
-app.use(ElementPlus)
+app.use(ElementPlus, { size: 'small' })
 app.mount('#app')
 </script>
 </body>

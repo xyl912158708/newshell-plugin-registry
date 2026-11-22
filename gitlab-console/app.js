@@ -707,5 +707,5 @@ const App = {
   }
 }
 const app = createApp(App)
-app.use(ElementPlus)
+app.use(ElementPlus, { size: 'small' })
 app.mount('#app')
