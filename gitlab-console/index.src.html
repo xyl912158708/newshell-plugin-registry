@@ -7,6 +7,25 @@
 document.documentElement.dataset.osTheme = 'dark'
 window.__osSetTheme = function (t) { document.documentElement.dataset.osTheme = t; document.documentElement.classList.toggle('dark', t === 'dark') }
 </script>
+
+<script src="./_sdk/plugin-api.js"></script>
+<script>
+/* SDK 主题跟随（阶段 7 迁移）：订阅宿主主题 → 驱动现有 __osSetTheme（html.dark）。
+ * 宿主 dark/light 直接映射；high-contrast 在 API SDK 侧已折算为 sdkTheme（dark 基础）。
+ * 插件内手动切换（toggleTheme）保持可用：手动选择在宿主下一次切换主题前有效，
+ * 之后重新跟随宿主。SDK 未加载时本段自动跳过，页面行为与迁移前一致。 */
+(function () {
+  var api = window.NewshellPluginApi && window.NewshellPluginApi.plugin
+  if (!api || !api.theme || !window.__osSetTheme) return
+  function apply(snap) {
+    if (!snap || snap.stale) return
+    window.__osSetTheme(snap.sdkTheme === 'light' ? 'light' : 'dark')
+  }
+  apply(api.theme.get())
+  api.theme.onChange(apply)
+  window.addEventListener('load', function () { apply(api.theme.get()) })
+})()
+</script>
 <!-- __EP_CSS__ -->
 <!-- __EP_DARK_CSS__ -->
 <style>
