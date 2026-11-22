@@ -688,10 +688,17 @@ const App = {
         h('header', { class: 'topbar' }, [
           h('span', { class: 'logo' }, [h(I.Connection, { size: 17 })]),
           h('div', { class: 'title-block' }, [h('h1', 'GitLab 管理台'), h('span', { class: 'sub' }, '项目 · 合并请求 · 流水线 · Issue')]),
+          cur ? h('span', { class: 'ns-pill' }, [h('span', { class: 'ns-dot on' }), cur.name]) : h('span', { class: 'ns-pill' }, [h('span', { class: 'ns-dot' }), '未选择连接']),
           h('span', { class: 'flex-spacer' }),
           h(ElButton, { text: true, icon: uiTheme.value === 'dark' ? I.Sunny : I.Moon, onClick: toggleTheme }, () => (uiTheme.value === 'dark' ? '切换浅色' : '切换深色'))
         ]),
         h('div', { class: 'layout' }, [side, main]),
+        h('footer', { class: 'ns-statusbar' }, [
+          h('span', { class: 'ns-st-item' }, [h('span', { class: 'ns-st-label' }, '连接'), cur ? cur.name : '—']),
+          h('span', { class: 'ns-st-item' }, [h('span', { class: 'ns-st-label' }, '项目'), curProject.value ? (curProject.value.path_with_namespace || curProject.value.name) : '未选择']),
+          h('span', { class: 'flex-spacer' }),
+          h('span', { class: 'ns-st-item' }, 'API 经本地代理转发')
+        ]),
         editor.open ? renderEditor() : null,
         issue.createOpen ? renderIssueCreate() : null,
         renderTrace()

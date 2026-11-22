@@ -187,6 +187,257 @@ html.dark{color-scheme:dark;--el-color-primary:#409eff;--el-color-primary-light-
   .md-body hr { border: none; border-top: 1px solid var(--el-border-color-lighter); margin: 12px 0; }
   .md-body img { max-width: 100%; }
 </style>
+<!-- NS-DS:BEGIN 统一设计系统（源：shared/design-system.css，勿手改本段，用 sync_design_system.py 同步） -->
+<style>
+/* ============================================================================
+ * NewShell 插件统一设计系统 · NS-DS v1（2026-11-22）
+ * 源文件：shared/design-system.css —— 四个 EP 插件共用同一份，禁止各插件私改。
+ * 同步方式：python3 sync_design_system.py（把本文件注入各插件 index.src.html
+ * 的 NS-DS 标记段，位于插件自有 <style> 之后，靠层叠顺序覆盖旧样式）。
+ * 设计原则（对齐宿主与用户既定品味）：
+ *   现代、安静、专业；中性分层表面，不用大面积渐变/玻璃模糊/夸张投影；
+ *   层级靠「页头区 / 上下文栏 / 内容区 / 状态栏」四段结构 + 表面明暗差表达，
+ *   不靠装饰。颜色一律消费 Element Plus 变量（随宿主主题令牌切换明暗）。
+ * 结构约定（四个插件必须一致）：
+ *   .topbar 52px 页头 → .layout（.side 240px 导航 + .main）
+ *   .main 内：上下文栏（.proj-bar/.toolbar/.crumbs）→ 分段式页签（.main-tabs）
+ *   → 工具栏（.tab-toolbar）→ 内容 → .ns-statusbar 状态栏 30px。
+ * ========================================================================== */
+
+/* ---------- 1. 设计令牌 ---------- */
+:root {
+  --ns-space-1: 4px; --ns-space-2: 8px; --ns-space-3: 12px;
+  --ns-space-4: 16px; --ns-space-5: 20px; --ns-space-6: 24px;
+  --ns-radius-s: 8px; --ns-radius-m: 10px; --ns-radius-l: 12px; --ns-radius-xl: 14px;
+  --ns-font-caption: 11.5px; --ns-font-body: 13px; --ns-font-title: 14.5px; --ns-font-display: 17px;
+  --ns-ease: cubic-bezier(.2, .7, .3, 1);
+  --ns-duration: 140ms;
+  --ns-surface-page: var(--el-bg-color-page);
+  --ns-surface-card: var(--el-bg-color);
+  --ns-surface-inset: var(--el-fill-color-lighter);
+  --ns-surface-hover: var(--el-fill-color-light);
+  --ns-border: var(--el-border-color-lighter);
+  --ns-border-strong: var(--el-border-color-light);
+  --ns-ring: 0 0 0 3px color-mix(in srgb, var(--el-color-primary) 22%, transparent);
+}
+html:not(.dark) {
+  --ns-shadow-1: 0 1px 2px rgba(16, 24, 40, .05), 0 1px 3px rgba(16, 24, 40, .04);
+  --ns-shadow-2: 0 8px 24px rgba(16, 24, 40, .12), 0 2px 6px rgba(16, 24, 40, .08);
+  --ns-side-bg: color-mix(in srgb, var(--el-bg-color) 55%, var(--el-bg-color-page));
+}
+html.dark {
+  --ns-shadow-1: 0 1px 2px rgba(0, 0, 0, .35);
+  --ns-shadow-2: 0 10px 28px rgba(0, 0, 0, .5), 0 2px 8px rgba(0, 0, 0, .4);
+  --ns-side-bg: color-mix(in srgb, var(--el-bg-color) 45%, var(--el-bg-color-page));
+}
+
+/* ---------- 2. 基础细节 ---------- */
+body { letter-spacing: .01em; -webkit-font-smoothing: antialiased; text-rendering: optimizeLegibility; }
+::selection { background: color-mix(in srgb, var(--el-color-primary) 28%, transparent); }
+::-webkit-scrollbar { width: 8px; height: 8px; }
+::-webkit-scrollbar-thumb { background: var(--el-border-color); border-radius: 4px; }
+::-webkit-scrollbar-thumb:hover { background: var(--el-text-color-placeholder); }
+::-webkit-scrollbar-track { background: transparent; }
+:focus-visible { outline: 2px solid var(--el-color-primary); outline-offset: 1px; }
+@media (prefers-reduced-motion: reduce) {
+  * { transition-duration: .01ms !important; animation-duration: .01ms !important; }
+}
+
+/* ---------- 3. 页头（层级第一段） ---------- */
+.app-root .topbar {
+  height: 52px; padding: 0 var(--ns-space-4); gap: var(--ns-space-3);
+  background: var(--ns-surface-card); box-shadow: var(--ns-shadow-1);
+  border-bottom: 1px solid var(--ns-border); position: relative; z-index: 20;
+}
+.app-root .topbar .logo {
+  width: 32px; height: 32px; border-radius: var(--ns-radius-m);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--app-on-accent) 18%, transparent);
+}
+.app-root .topbar .title-block h1 { font-size: var(--ns-font-title); font-weight: 680; letter-spacing: .01em; }
+.app-root .topbar .title-block .sub { font-size: var(--ns-font-caption); margin-top: 1px; }
+.ns-pill {
+  display: inline-flex; align-items: center; gap: 6px; height: 24px; padding: 0 10px;
+  border-radius: 999px; font-size: var(--ns-font-caption); font-weight: 550; white-space: nowrap;
+  color: var(--el-text-color-regular); background: var(--ns-surface-inset);
+  border: 1px solid var(--ns-border);
+}
+.ns-pill .ns-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--el-text-color-placeholder); flex: none; }
+.ns-pill .ns-dot.on { background: var(--el-color-success); box-shadow: 0 0 0 3px color-mix(in srgb, var(--el-color-success) 20%, transparent); }
+
+/* ---------- 4. 侧栏导航（工具导航现代化） ---------- */
+.app-root .layout .side {
+  width: 240px; background: var(--ns-side-bg);
+  border-right: 1px solid var(--ns-border); padding-bottom: var(--ns-space-2);
+}
+.app-root .side-head { padding: 14px 14px 8px; }
+.app-root .side-title {
+  font-size: 11px; font-weight: 650; letter-spacing: .09em; text-transform: uppercase;
+  color: var(--el-text-color-secondary);
+}
+.app-root .side-scroll .el-scrollbar__wrap { padding-right: 2px; }
+.app-root .conn-item, .app-root .bucket-item {
+  min-height: 40px; margin: 0 8px 2px; padding: 7px 10px;
+  border-radius: var(--ns-radius-m); border: 1px solid transparent;
+  transition: background var(--ns-duration) var(--ns-ease), border-color var(--ns-duration) var(--ns-ease), box-shadow var(--ns-duration) var(--ns-ease);
+}
+.app-root .conn-item:hover, .app-root .bucket-item:hover { background: var(--ns-surface-hover); }
+.app-root .conn-item.active, .app-root .bucket-item.active {
+  background: var(--el-color-primary-light-9); border-color: var(--ns-border);
+  box-shadow: inset 3px 0 0 var(--el-color-primary);
+}
+.app-root .conn-avatar { width: 28px; height: 28px; border-radius: 9px; }
+.app-root .conn-dot.on { box-shadow: 0 0 0 3px color-mix(in srgb, var(--el-color-success) 20%, transparent); }
+.app-root .side-empty {
+  margin: 4px 10px; padding: 12px; border: 1px dashed var(--ns-border-strong);
+  border-radius: var(--ns-radius-m); background: var(--ns-surface-inset); line-height: 1.7;
+}
+.app-root .side-foot { padding: 10px 12px 4px; border-top: 1px solid var(--ns-border); margin-top: 6px; }
+/* dev-toolbox 分类导航 */
+.app-root .nav-group { margin-bottom: 10px; }
+.app-root .nav-cat {
+  display: flex; align-items: center; gap: 6px;
+  padding: 10px 16px 5px; font-size: 11px; font-weight: 650;
+  letter-spacing: .09em; color: var(--el-text-color-secondary);
+}
+.app-root .nav-count {
+  margin-left: auto; min-width: 20px; height: 16px; padding: 0 5px; border-radius: 999px;
+  display: inline-flex; align-items: center; justify-content: center;
+  font-size: 10.5px; font-weight: 600; letter-spacing: 0;
+  color: var(--el-text-color-secondary); background: var(--ns-surface-inset); border: 1px solid var(--ns-border);
+}
+.app-root .nav-item {
+  display: flex; align-items: center; min-height: 34px; margin: 0 8px 1px; padding: 5px 10px;
+  border-radius: var(--ns-radius-s); border: 1px solid transparent; font-size: 12.5px;
+  transition: background var(--ns-duration) var(--ns-ease), box-shadow var(--ns-duration) var(--ns-ease);
+}
+.app-root .nav-item:hover { background: var(--ns-surface-hover); }
+.app-root .nav-item.active {
+  background: var(--el-color-primary-light-9); color: var(--el-color-primary); font-weight: 600;
+  box-shadow: inset 3px 0 0 var(--el-color-primary);
+}
+.app-root .nav-search { padding: 12px 12px 6px; }
+/* object-storage 侧栏盒改为统一面板 */
+.app-root .os-content .side { width: 252px; background: transparent; border-right: none; padding-bottom: 0; }
+.app-root .side-box {
+  border-radius: var(--ns-radius-xl); border: 1px solid var(--ns-border);
+  box-shadow: var(--ns-shadow-1); padding: 12px 10px;
+}
+.app-root .side-box .side-head { padding: 0 4px 9px; font-size: 11px; letter-spacing: .09em; text-transform: uppercase; }
+.app-root .side-box .conn-item, .app-root .side-box .bucket-item { margin-left: 0; margin-right: 0; }
+
+/* ---------- 5. 主区与页签（分段式导航，替代原始下划线页签） ---------- */
+.app-root .main { background: var(--ns-surface-page); }
+.app-root .main-tabs .el-tabs__header {
+  margin: 12px 20px 0; background: var(--ns-surface-inset);
+  border: 1px solid var(--ns-border); border-radius: 999px; padding: 3px;
+  align-self: flex-start; max-width: calc(100% - 40px);
+}
+.app-root .main-tabs .el-tabs__nav-wrap::after, .app-root .main-tabs .el-tabs__active-bar { display: none; }
+.app-root .main-tabs .el-tabs__nav { border: none; gap: 2px; }
+.app-root .main-tabs .el-tabs__item {
+  height: 30px; line-height: 30px; padding: 0 15px !important; border: none !important;
+  border-radius: 999px; font-size: 12.5px; font-weight: 550; color: var(--el-text-color-regular);
+  transition: background var(--ns-duration) var(--ns-ease), color var(--ns-duration) var(--ns-ease);
+}
+.app-root .main-tabs .el-tabs__item:hover { color: var(--el-color-primary); }
+.app-root .main-tabs .el-tabs__item.is-active {
+  background: var(--ns-surface-card); color: var(--el-color-primary); box-shadow: var(--ns-shadow-1);
+}
+.app-root .main-tabs .el-tabs__content { padding: 16px 20px 24px; }
+
+/* ---------- 6. 上下文栏与工具栏（操作区专业化：成组、成面） ---------- */
+.app-root .proj-bar {
+  margin: 14px 20px 0; padding: 9px 10px; flex-wrap: wrap;
+  background: var(--ns-surface-card); border: 1px solid var(--ns-border);
+  border-radius: var(--ns-radius-l); box-shadow: var(--ns-shadow-1);
+}
+.app-root .tab-toolbar {
+  position: sticky; top: 0; z-index: 6;
+  padding: 8px 10px; margin-bottom: 14px;
+  background: var(--ns-surface-card); border: 1px solid var(--ns-border);
+  border-radius: var(--ns-radius-l); box-shadow: var(--ns-shadow-1);
+}
+.app-root .os-content { padding: 16px 18px 18px; }
+.app-root .os-content .crumbs {
+  min-height: 38px; margin-bottom: 10px; padding: 5px 8px;
+  background: var(--ns-surface-card); border: 1px solid var(--ns-border);
+  border-radius: var(--ns-radius-l); box-shadow: var(--ns-shadow-1);
+}
+.app-root .os-content .toolbar {
+  padding: 8px 10px; margin-bottom: 10px;
+  background: var(--ns-surface-card); border: 1px solid var(--ns-border);
+  border-radius: var(--ns-radius-l); box-shadow: var(--ns-shadow-1);
+}
+.app-root .os-content .toolbar.batch-bar {
+  background: color-mix(in srgb, var(--el-color-primary) 8%, var(--ns-surface-card));
+  border-color: color-mix(in srgb, var(--el-color-primary) 32%, transparent);
+}
+
+/* ---------- 7. 内容组件（卡片 / 行列表 / 统计 / 表格） ---------- */
+.app-root .tool-panel { padding: 18px 24px 28px; }
+.app-root .tool-head { margin-bottom: 16px; padding-bottom: 13px; border-bottom: 1px solid var(--ns-border); }
+.app-root .tool-head-row { display: flex; align-items: center; gap: 10px; margin-bottom: 4px; }
+.app-root .tool-head-row h2 { font-size: var(--ns-font-display); font-weight: 680; margin: 0; }
+.tool-cat-chip {
+  height: 22px; padding: 0 9px; border-radius: 999px; display: inline-flex; align-items: center;
+  font-size: 11px; font-weight: 600; color: var(--el-color-primary);
+  background: var(--el-color-primary-light-9); border: 1px solid color-mix(in srgb, var(--el-color-primary) 25%, transparent);
+}
+.app-root .row-item {
+  border-radius: var(--ns-radius-l); padding: 11px 14px;
+  transition: border-color var(--ns-duration) var(--ns-ease), box-shadow var(--ns-duration) var(--ns-ease), transform var(--ns-duration) var(--ns-ease);
+}
+.app-root .row-item:hover { box-shadow: var(--ns-shadow-1); transform: translateY(-1px); border-color: var(--ns-border-strong); }
+.app-root .stat-grid { gap: 12px; }
+.app-root .stat-card {
+  border-radius: var(--ns-radius-l); border: 1px solid var(--ns-border);
+  background: var(--ns-surface-card); box-shadow: var(--ns-shadow-1); padding: 14px 16px;
+}
+.app-root .stat-card .v { font-size: 20px; font-weight: 700; letter-spacing: -.01em; }
+.app-root .el-table { border-radius: var(--ns-radius-l); overflow: hidden; }
+.app-root .el-table th.el-table__cell { background: var(--ns-surface-inset); font-size: 12px; font-weight: 600; color: var(--el-text-color-regular); }
+.app-root .acl-form, .app-root .io-card, .app-root .ctl-card {
+  border-radius: var(--ns-radius-l); box-shadow: var(--ns-shadow-1);
+}
+.app-root .os-content .list-wrap, .app-root .os-content .tasks {
+  border-radius: var(--ns-radius-xl); box-shadow: var(--ns-shadow-1); border-color: var(--ns-border);
+}
+.app-root .os-content .list-head {
+  height: 36px; font-size: 11.5px; letter-spacing: .05em; font-weight: 600;
+}
+.app-root .os-content .list-foot {
+  min-height: 34px; padding: 6px 12px; background: var(--ns-surface-inset);
+}
+
+/* ---------- 8. EP 控件统一细节 ---------- */
+.app-root .el-button { border-radius: var(--ns-radius-s); font-weight: 550; transition: all var(--ns-duration) var(--ns-ease); }
+.app-root .el-button--primary { box-shadow: 0 1px 2px color-mix(in srgb, var(--el-color-primary) 35%, transparent); }
+.app-root .el-input__wrapper, .app-root .el-select__wrapper, .app-root .el-textarea__inner {
+  border-radius: var(--ns-radius-s); transition: box-shadow var(--ns-duration) var(--ns-ease);
+}
+.app-root .el-input__wrapper.is-focus, .app-root .el-select__wrapper.is-focused { box-shadow: 0 0 0 1px var(--el-color-primary) inset, var(--ns-ring); }
+.app-root .el-dialog { border-radius: var(--ns-radius-xl); box-shadow: var(--ns-shadow-2); overflow: hidden; }
+.app-root .el-dialog__header { padding: 16px 20px 10px; }
+.app-root .el-dialog__title { font-size: 14.5px; font-weight: 650; }
+.app-root .el-dialog__body { padding: 10px 20px 16px; }
+.app-root .el-dialog__footer { padding: 12px 20px 16px; border-top: 1px solid var(--ns-border); }
+.app-root .el-tag { border-radius: 6px; font-weight: 550; }
+.app-root .el-message { border-radius: var(--ns-radius-m); box-shadow: var(--ns-shadow-2); }
+.app-root .el-empty { padding: 28px 0; }
+
+/* ---------- 9. 状态栏（层级第四段） ---------- */
+.ns-statusbar {
+  flex: none; height: 30px; display: flex; align-items: center; gap: 16px;
+  padding: 0 14px; font-size: var(--ns-font-caption); color: var(--el-text-color-secondary);
+  background: var(--ns-surface-card); border-top: 1px solid var(--ns-border);
+  white-space: nowrap; overflow: hidden;
+}
+.ns-statusbar .ns-st-item { display: inline-flex; align-items: center; gap: 6px; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+.ns-statusbar .ns-st-label { color: var(--el-text-color-placeholder); }
+.ns-statusbar .flex-spacer { flex: 1; }
+
+</style>
+<!-- NS-DS:END -->
 </head>
 <body>
 <div id="app"></div>
@@ -977,10 +1228,17 @@ const App = {
         h('header', { class: 'topbar' }, [
           h('span', { class: 'logo' }, [h(I.Connection, { size: 17 })]),
           h('div', { class: 'title-block' }, [h('h1', 'GitLab 管理台'), h('span', { class: 'sub' }, '项目 · 合并请求 · 流水线 · Issue')]),
+          cur ? h('span', { class: 'ns-pill' }, [h('span', { class: 'ns-dot on' }), cur.name]) : h('span', { class: 'ns-pill' }, [h('span', { class: 'ns-dot' }), '未选择连接']),
           h('span', { class: 'flex-spacer' }),
           h(ElButton, { text: true, icon: uiTheme.value === 'dark' ? I.Sunny : I.Moon, onClick: toggleTheme }, () => (uiTheme.value === 'dark' ? '切换浅色' : '切换深色'))
         ]),
         h('div', { class: 'layout' }, [side, main]),
+        h('footer', { class: 'ns-statusbar' }, [
+          h('span', { class: 'ns-st-item' }, [h('span', { class: 'ns-st-label' }, '连接'), cur ? cur.name : '—']),
+          h('span', { class: 'ns-st-item' }, [h('span', { class: 'ns-st-label' }, '项目'), curProject.value ? (curProject.value.path_with_namespace || curProject.value.name) : '未选择']),
+          h('span', { class: 'flex-spacer' }),
+          h('span', { class: 'ns-st-item' }, 'API 经本地代理转发')
+        ]),
         editor.open ? renderEditor() : null,
         issue.createOpen ? renderIssueCreate() : null,
         renderTrace()

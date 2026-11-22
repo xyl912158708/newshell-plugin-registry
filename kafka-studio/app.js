@@ -581,10 +581,17 @@ const App = {
         h('header', { class: 'topbar' }, [
           h('span', { class: 'logo' }, [h(I.DataLine, { size: 17 })]),
           h('div', { class: 'title-block' }, [h('h1', 'Kafka Studio'), h('span', { class: 'sub' }, '集群 · 消息 · 消费组 · ACL · Schema')]),
+          curConn.value ? h('span', { class: 'ns-pill' }, [h('span', { class: ['ns-dot', { on: !!session.id }] }), session.id ? '已连接 · ' + session.brokers.length + ' 个 Broker' : '未连接']) : h('span', { class: 'ns-pill' }, [h('span', { class: 'ns-dot' }), '未选择连接']),
           h('span', { class: 'flex-spacer' }),
           h(ElButton, { text: true, icon: uiTheme.value === 'dark' ? I.Sunny : I.Moon, onClick: toggleTheme }, () => (uiTheme.value === 'dark' ? '切换浅色' : '切换深色'))
         ]),
         h('div', { class: 'layout' }, [side, main]),
+        h('footer', { class: 'ns-statusbar' }, [
+          h('span', { class: 'ns-st-item' }, [h('span', { class: 'ns-st-label' }, '连接'), curConn.value ? curConn.value.name : '—']),
+          h('span', { class: 'ns-st-item' }, [h('span', { class: 'ns-st-label' }, 'Broker'), curConn.value ? String(curConn.value.brokers || '') : '—']),
+          h('span', { class: 'flex-spacer' }),
+          h('span', { class: 'ns-st-item' }, session.id ? '会话已建立' : '会话未建立')
+        ]),
         editor.open ? renderEditor() : null
       ])
     }

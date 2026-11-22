@@ -650,12 +650,13 @@ const App = {
       const navGroups = CATS.map((cat) => {
         const items = TOOLS.filter((t) => t.cat === cat && (!q || t.name.toLowerCase().includes(q) || t.desc.toLowerCase().includes(q)))
         if (!items.length) return null
-        return h('div', { class: 'nav-group' }, [h('div', { class: 'nav-cat' }, cat), ...items.map((t) => h('div', { class: ['nav-item', { active: t.id === activeId.value }], onClick: () => { activeId.value = t.id } }, t.name))])
+        return h('div', { class: 'nav-group' }, [h('div', { class: 'nav-cat' }, [h('span', cat), h('span', { class: 'nav-count' }, String(items.length))]), ...items.map((t) => h('div', { class: ['nav-item', { active: t.id === activeId.value }], onClick: () => { activeId.value = t.id } }, [h('span', { class: 'nav-name' }, t.name)]))])
       }).filter(Boolean)
       return h('div', { class: 'app-root' }, [
         h('header', { class: 'topbar' }, [
           h('span', { class: 'logo' }, [h(TB_ICONS.Grid, { size: 17 })]),
           h('div', { class: 'title-block' }, [h('h1', '开发者工具箱'), h('span', { class: 'sub' }, TOOLS.length + ' 个工具 · 完全离线')]),
+          h('span', { class: 'ns-pill' }, [h('span', { class: 'ns-dot on' }), '本地计算 · 无网络']),
           h('span', { class: 'flex-spacer' }),
           h(ElButton, { text: true, icon: uiTheme.value === 'dark' ? TB_ICONS.Sunny : TB_ICONS.Moon, onClick: toggleTheme }, () => (uiTheme.value === 'dark' ? '切换浅色' : '切换深色'))
         ]),
@@ -666,10 +667,16 @@ const App = {
           ]),
           h('main', { class: 'main' }, [
             h('div', { class: 'tool-panel' }, [
-              h('div', { class: 'tool-head' }, [h('h2', def.name), h('div', { class: 'desc' }, def.desc)]),
+              h('div', { class: 'tool-head' }, [h('div', { class: 'tool-head-row' }, [h('h2', def.name), h('span', { class: 'tool-cat-chip' }, def.cat)]), h('div', { class: 'desc' }, def.desc)]),
               def.custom ? def.custom(s) : ioTool(def, s)
             ])
           ])
+        ]),
+        h('footer', { class: 'ns-statusbar' }, [
+          h('span', { class: 'ns-st-item' }, [h('span', { class: 'ns-st-label' }, '当前工具'), def.name]),
+          h('span', { class: 'ns-st-item' }, [h('span', { class: 'ns-st-label' }, '分类'), def.cat]),
+          h('span', { class: 'flex-spacer' }),
+          h('span', { class: 'ns-st-item' }, TOOLS.length + ' 个工具 · 输入不离开本机')
         ])
       ])
     }
