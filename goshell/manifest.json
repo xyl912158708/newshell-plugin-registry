@@ -1,7 +1,7 @@
 {
   "id": "goshell",
   "name": "GoShell",
-  "version": "1.1.0",
+  "version": "1.1.1",
   "description": "直连 GoShell Agent HTTP/WS 服务：终端、文件面板与管理页（无需本地客户端）",
   "author": "NewShell",
   "main": "main.js",
@@ -15,5 +15,9 @@
       }
     ]
   },
-  "permissions": ["host_access", "terminal", "network"]
+  "permissions": [
+    "host_access",
+    "terminal",
+    "network"
+  ]
 }

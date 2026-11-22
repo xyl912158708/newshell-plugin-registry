@@ -50,7 +50,7 @@
       "name": "GoShell",
       "description": "直连 GoShell Agent HTTP/WS 服务：终端、文件面板与管理页（无需本地客户端）",
       "author": "xyl",
-      "latestVersion": "1.1.0",
+      "latestVersion": "1.1.1",
       "tags": [
         "工具",
         "SSH"
@@ -79,6 +79,12 @@
           "downloadUrl": "https://raw.githubusercontent.com/xyl912158708/newshell-plugin-registry/main/plugins/goshell/goshell-v1.1.0.zip",
           "minAppVersion": "2.5.0",
           "releaseDate": "2026-11-09"
+        },
+        {
+          "version": "1.1.1",
+          "downloadUrl": "https://raw.githubusercontent.com/xyl912158708/newshell-plugin-registry/main/plugins/goshell/goshell-v1.1.1.zip",
+          "minAppVersion": "2.5.0",
+          "releaseDate": "2026-11-22"
         }
       ]
     },
