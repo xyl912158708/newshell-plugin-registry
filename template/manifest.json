@@ -1,7 +1,7 @@
 {
   "id": "template",
   "name": "Template Plugin",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "NewShell 官方模板插件，演示所有插件 API 的标准用法",
   "author": "NewShell",
   "main": "main.js",

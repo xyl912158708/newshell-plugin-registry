@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="zh-CN">
+<html lang="zh-CN" data-ui-theme="dark">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -7,9 +7,9 @@
 <style>
   * { margin: 0; padding: 0; box-sizing: border-box; }
   body {
-    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-    background: var(--bg-primary, #1e1e2e);
-    color: var(--text-primary, #cdd6f4);
+    font-family: var(--ui-font-sans, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif);
+    background: var(--ui-bg, #080b12);
+    color: var(--ui-text, #e6ecf3);
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -20,24 +20,16 @@
   }
   h2 {
     font-size: 16px;
-    color: var(--accent-color, #89b4fa);
+    color: var(--ui-primary, #2dd4bf);
   }
-  .info-card {
-    background: var(--bg-secondary, #313244);
-    border: 1px solid var(--border-color, #45475a);
-    border-radius: 10px;
-    padding: 20px;
-    text-align: center;
-    max-width: 400px;
-    width: 100%;
-  }
-  .info-card p {
+  ui-card { width: 100%; max-width: 400px; }
+  .info-body p {
     font-size: 13px;
-    color: var(--text-secondary, #a6adc8);
+    color: var(--ui-text-secondary, #9aa4b8);
     margin: 6px 0;
   }
-  .info-card .key {
-    color: var(--accent-color, #89b4fa);
+  .info-body .key {
+    color: var(--ui-primary, #2dd4bf);
     font-weight: 600;
   }
   .actions {
@@ -46,36 +38,8 @@
     flex-wrap: wrap;
     justify-content: center;
   }
-  button {
-    padding: 10px 20px;
-    border: none;
-    border-radius: 8px;
-    font-size: 13px;
-    font-weight: 600;
-    cursor: pointer;
-    transition: all 0.15s;
-    font-family: inherit;
-  }
-  .btn-primary {
-    background: var(--accent-color, #89b4fa);
-    color: #1e1e2e;
-  }
-  .btn-primary:hover {
-    transform: translateY(-1px);
-    box-shadow: 0 4px 16px rgba(137, 180, 250, 0.3);
-  }
-  .btn-close {
-    background: var(--bg-tertiary, #45475a);
-    color: var(--text-primary, #cdd6f4);
-    border: 1px solid var(--border-color, #585b70);
-  }
-  .btn-close:hover {
-    background: var(--danger-color, #f38ba8);
-    color: #fff;
-    border-color: transparent;
-  }
   .params-display {
-    background: var(--bg-tertiary, #45475a);
+    background: var(--ui-surface-hover, #1e2536);
     border-radius: 6px;
     padding: 12px;
     font-size: 11px;
@@ -85,12 +49,12 @@
     max-width: 400px;
     width: 100%;
     text-align: left;
-    color: var(--text-secondary, #a6adc8);
+    color: var(--ui-text-secondary, #9aa4b8);
     max-height: 120px;
     overflow-y: auto;
   }
   .empty {
-    color: var(--text-muted, #6c7086);
+    color: var(--ui-text-muted, #8494b3);
     font-style: italic;
     font-size: 13px;
   }
@@ -99,20 +63,23 @@
 <body>
   <h2>📋 插件弹窗示例</h2>
   
-  <div class="info-card">
-    <p>宽高自定义 | 居中显示 | iframe 内容</p>
-    <p style="margin-top:10px" v-if="hasData">传入参数:</p>
-  </div>
+  <ui-card shadow="never">
+    <div class="info-body">
+      <p>宽高自定义 | 居中显示 | iframe 内容</p>
+      <p style="margin-top:10px">传入参数:</p>
+    </div>
+  </ui-card>
   
   <div id="params" class="params-display">
     <span class="empty">（等待接收参数...）</span>
   </div>
 
   <div class="actions">
-    <button class="btn-primary" onclick="sendResult()">✅ 返回结果并关闭</button>
-    <button class="btn-close" onclick="closeDialog()">✕ 关闭弹窗</button>
+    <ui-button variant="primary" onclick="sendResult()">✅ 返回结果并关闭</ui-button>
+    <ui-button onclick="closeDialog()">✕ 关闭弹窗</ui-button>
   </div>
 
+  <script src="./_sdk/plugin-ui.js"></script>
   <script>
     let hasData = false
 

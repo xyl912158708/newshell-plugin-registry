@@ -6,7 +6,7 @@
       "name": "模板插件",
       "description": "这是一个模板插件",
       "author": "Your Name",
-      "latestVersion": "1.0.0",
+      "latestVersion": "1.0.1",
       "tags": [
         "工具",
         "SSH"
@@ -17,6 +17,12 @@
           "downloadUrl": "https://raw.githubusercontent.com/xyl912158708/newshell-plugin-registry/main/plugins/template/template-v1.0.0.zip",
           "minAppVersion": "1.2.0",
           "releaseDate": "2026-06-01"
+        },
+        {
+          "version": "1.0.1",
+          "downloadUrl": "https://raw.githubusercontent.com/xyl912158708/newshell-plugin-registry/main/plugins/template/template-v1.0.1.zip",
+          "minAppVersion": "1.2.0",
+          "releaseDate": "2026-11-22"
         }
       ]
     },

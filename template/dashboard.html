@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="zh-CN">
+<html lang="zh-CN" data-ui-theme="dark">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -7,37 +7,21 @@
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
     body {
-      font-family: 'DM Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
-      background: var(--bg-primary);
-      color: var(--text-primary);
-      padding: 32px;
+      font-family: var(--ui-font-sans, 'DM Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif);
+      background: var(--ui-bg, #080b12);
+      color: var(--ui-text, #e6ecf3);
       line-height: 1.6;
     }
-    h2 {
-      font-size: 18px;
-      font-weight: 600;
-      margin-bottom: 8px;
+    .sdk-status {
+      font-size: 12px;
+      color: var(--ui-text-secondary, #9aa4b8);
+      margin-bottom: 24px;
     }
-    .subtitle {
-      font-size: 13px;
-      color: var(--text-muted);
-      margin-bottom: 32px;
-    }
+    .sdk-status .value { font-weight: 600; color: var(--ui-text, #e6ecf3); }
     .card-grid {
       display: grid;
       grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
       gap: 16px;
-    }
-    .card {
-      background: var(--bg-secondary);
-      border: 1px solid var(--border-color);
-      border-radius: 8px;
-      padding: 20px;
-      transition: all 0.2s ease;
-    }
-    .card:hover {
-      border-color: var(--accent-color);
-      box-shadow: 0 0 12px rgba(45, 212, 191, 0.1);
     }
     .card-icon {
       font-size: 24px;
@@ -50,35 +34,72 @@
     }
     .card-desc {
       font-size: 12px;
-      color: var(--text-muted);
+      color: var(--ui-text-muted, #8494b3);
     }
   </style>
 </head>
 <body>
-  <h2>📋 Template Dashboard</h2>
-  <p class="subtitle">此区域由插件占据，可以用于显示自定义内容——如 API 管理、监控面板等。</p>
+  <ui-page>
+    <ui-page-header title="📋 Template Dashboard" description="此区域由插件占据，可以用于显示自定义内容——如 API 管理、监控面板等。"></ui-page-header>
 
-  <div class="card-grid">
-    <div class="card">
-      <div class="card-icon">🔌</div>
-      <div class="card-title">注册连接类型</div>
-      <div class="card-desc">通过 connection.registerType() 注册自定义协议处理</div>
+    <p class="sdk-status">
+      当前主题：<span class="value" id="themeName">-</span> ·
+      本页打开次数（plugin.storage）：<span class="value" id="openCount">-</span>
+    </p>
+
+    <div class="card-grid">
+      <ui-card>
+        <div class="card-icon">🔌</div>
+        <div class="card-title">注册连接类型</div>
+        <div class="card-desc">通过 connection.registerType() 注册自定义协议处理</div>
+      </ui-card>
+      <ui-card>
+        <div class="card-icon">📊</div>
+        <div class="card-title">面板标签</div>
+        <div class="card-desc">通过 manifest 的 sidePanelTabs / rightPanelTabs 添加侧边面板</div>
+      </ui-card>
+      <ui-card>
+        <div class="card-icon">🖥️</div>
+        <div class="card-title">主页渲染</div>
+        <div class="card-desc">通过 manifest 的 toolPages + renderer 占据终端主区域</div>
+      </ui-card>
+      <ui-card>
+        <div class="card-icon">💾</div>
+        <div class="card-title">持久化存储</div>
+        <div class="card-desc">通过 plugin.storage 读写键值对，支持 JSON 数据</div>
+      </ui-card>
     </div>
-    <div class="card">
-      <div class="card-icon">📊</div>
-      <div class="card-title">面板标签</div>
-      <div class="card-desc">通过 manifest 的 sidePanelTabs / rightPanelTabs 添加侧边面板</div>
-    </div>
-    <div class="card">
-      <div class="card-icon">🖥️</div>
-      <div class="card-title">主页渲染</div>
-      <div class="card-desc">通过 manifest 的 toolPages + renderer 占据终端主区域</div>
-    </div>
-    <div class="card">
-      <div class="card-icon">💾</div>
-      <div class="card-title">持久化存储</div>
-      <div class="card-desc">通过 plugin.storage 读写键值对，支持 JSON 数据</div>
-    </div>
-  </div>
+  </ui-page>
+
+  <script src="./_sdk/plugin-ui.js"></script>
+  <script src="./_sdk/plugin-api.js"></script>
+  <script>
+    // 主题跟随演示：plugin.theme 提供当前快照与变化订阅（宿主切换主题时实时更新）。
+    // 页面配色本身由 plugin-ui.js 注入的 --ui-* Token 驱动，无需页面手动处理。
+    (function () {
+      var plugin = window.NewshellPluginApi && window.NewshellPluginApi.plugin
+      if (!plugin) return
+
+      var themeEl = document.getElementById('themeName')
+      function renderTheme(snap) {
+        if (snap && themeEl) themeEl.textContent = snap.theme
+      }
+      if (plugin.theme) {
+        renderTheme(plugin.theme.get())
+        plugin.theme.onChange(renderTheme)
+      }
+
+      // Storage 演示：统计本页打开次数（经宿主 RPC 落盘到插件数据目录）。
+      if (plugin.storage) {
+        plugin.storage.get('dashboard-open-count').then(function (count) {
+          var next = (typeof count === 'number' ? count : 0) + 1
+          document.getElementById('openCount').textContent = String(next)
+          return plugin.storage.set('dashboard-open-count', next)
+        }).catch(function () {
+          document.getElementById('openCount').textContent = '（不可用）'
+        })
+      }
+    })()
+  </script>
 </body>
 </html>

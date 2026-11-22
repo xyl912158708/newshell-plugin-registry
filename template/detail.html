@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="zh-CN">
+<html lang="zh-CN" data-ui-theme="dark">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -7,9 +7,9 @@
 <style>
   * { margin: 0; padding: 0; box-sizing: border-box; }
   body {
-    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-    background: var(--bg-primary, #1e1e2e);
-    color: var(--text-primary, #cdd6f4);
+    font-family: var(--ui-font-sans, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif);
+    background: var(--ui-bg, #080b12);
+    color: var(--ui-text, #e6ecf3);
     padding: 24px;
     min-height: 100vh;
   }
@@ -19,7 +19,7 @@
     align-items: center;
     justify-content: center;
     min-height: 300px;
-    color: var(--text-muted, #6c7086);
+    color: var(--ui-text-muted, #8494b3);
     font-size: 14px;
     gap: 8px;
   }
@@ -27,7 +27,7 @@
   .detail-header {
     margin-bottom: 20px;
     padding-bottom: 16px;
-    border-bottom: 1px solid var(--border-color, #45475a);
+    border-bottom: 1px solid var(--ui-border, rgba(255,255,255,0.06));
   }
   .title-row { display: flex; align-items: center; gap: 12px; margin-bottom: 8px; }
   .method-badge {
@@ -39,20 +39,20 @@
     letter-spacing: 0.5px;
     text-transform: uppercase;
   }
-  .method-GET    { background: rgba(137,180,250,0.15); color: #89b4fa; }
-  .method-POST   { background: rgba(166,227,161,0.15); color: #a6e3a1; }
-  .method-PUT    { background: rgba(249,226,175,0.15); color: #f9e2af; }
-  .method-DELETE { background: rgba(243,139,168,0.15); color: #f38ba8; }
-  .path-text { font-family: 'Cascadia Code', 'Fira Code', monospace; font-size: 14px; color: var(--accent-color, #89b4fa); }
-  .info-text { font-size: 13px; color: var(--text-secondary, #a6adc8); line-height: 1.6; }
+  .method-GET    { background: var(--ui-info-soft, rgba(96,165,250,0.12)); color: var(--ui-info, #60a5fa); }
+  .method-POST   { background: var(--ui-success-soft, rgba(74,222,128,0.12)); color: var(--ui-success, #4ade80); }
+  .method-PUT    { background: var(--ui-warning-soft, rgba(251,191,36,0.12)); color: var(--ui-warning, #fbbf24); }
+  .method-DELETE { background: var(--ui-danger-soft, rgba(248,113,113,0.12)); color: var(--ui-danger, #f87171); }
+  .path-text { font-family: 'Cascadia Code', 'Fira Code', monospace; font-size: 14px; color: var(--ui-primary, #2dd4bf); }
+  .info-text { font-size: 13px; color: var(--ui-text-secondary, #9aa4b8); line-height: 1.6; }
   .section { margin-bottom: 20px; }
   .section-title {
     font-size: 13px;
     font-weight: 700;
-    color: var(--text-primary, #cdd6f4);
+    color: var(--ui-text, #e6ecf3);
     margin-bottom: 10px;
     padding-bottom: 6px;
-    border-bottom: 1px solid var(--bg-secondary, #313244);
+    border-bottom: 1px solid var(--ui-surface, #171d2c);
   }
   .param-table {
     width: 100%;
@@ -62,40 +62,40 @@
   .param-table th {
     text-align: left;
     padding: 6px 10px;
-    background: var(--bg-secondary, #313244);
-    color: var(--text-secondary, #a6adc8);
+    background: var(--ui-surface, #171d2c);
+    color: var(--ui-text-secondary, #9aa4b8);
     font-weight: 600;
   }
   .param-table td {
     padding: 6px 10px;
-    border-bottom: 1px solid var(--bg-secondary, #313244);
+    border-bottom: 1px solid var(--ui-surface, #171d2c);
     vertical-align: top;
   }
-  .param-table .required { color: #f38ba8; font-weight: 700; }
-  .param-table .optional { color: var(--text-muted, #6c7086); }
+  .param-table .required { color: var(--ui-danger, #f87171); font-weight: 700; }
+  .param-table .optional { color: var(--ui-text-muted, #8494b3); }
   pre {
-    background: var(--bg-secondary, #313244);
+    background: var(--ui-surface, #171d2c);
     border-radius: 8px;
     padding: 12px 16px;
     font-family: 'Cascadia Code', 'Fira Code', monospace;
     font-size: 12px;
     line-height: 1.5;
     overflow-x: auto;
-    color: var(--text-primary, #cdd6f4);
+    color: var(--ui-text, #e6ecf3);
     white-space: pre-wrap;
   }
   .raw-section { margin-top: 24px; }
   .raw-section pre {
-    background: var(--bg-tertiary, #45475a);
+    background: var(--ui-surface-hover, #1e2536);
     font-size: 11px;
-    color: var(--text-muted, #6c7086);
+    color: var(--ui-text-muted, #8494b3);
     max-height: 200px;
     overflow-y: auto;
   }
   .footer-hint {
     margin-top: 24px;
     font-size: 11px;
-    color: var(--text-muted, #6c7086);
+    color: var(--ui-text-muted, #8494b3);
     text-align: center;
   }
 </style>
@@ -103,9 +103,7 @@
 <body>
   <!-- 空状态：尚未收到数据 -->
   <div id="emptyState" class="empty-state">
-    <span class="icon">📄</span>
-    <span>请从左侧「数据列表」面板点击一个数据项</span>
-    <span style="font-size:11px;opacity:0.5">数据将在此处渲染展示</span>
+    <ui-empty description="请从左侧「数据列表」面板点击一个数据项，数据将在此处渲染展示"></ui-empty>
   </div>
 
   <!-- 详情视图：收到数据后显示 -->
@@ -147,6 +145,7 @@
     </p>
   </div>
 
+<script src="./_sdk/plugin-ui.js"></script>
 <script>
 // ============================================================
 // 工具页 iframe 接收 params 演示

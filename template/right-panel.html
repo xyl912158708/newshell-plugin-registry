@@ -1,75 +1,67 @@
 <!DOCTYPE html>
-<html lang="zh-CN">
+<html lang="zh-CN" data-ui-theme="dark">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <style>
   * { margin: 0; padding: 0; box-sizing: border-box; }
   body {
-    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-    background: var(--bg-primary, #1e1e2e);
-    color: var(--text-primary, #cdd6f4);
-    padding: 16px;
+    font-family: var(--ui-font-sans, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif);
+    background: var(--ui-bg, #080b12);
+    color: var(--ui-text, #e6ecf3);
     font-size: 13px;
     line-height: 1.6;
   }
-  h2 { font-size: 15px; margin-bottom: 16px; color: var(--accent-color, #89b4fa); }
+  h2 { font-size: 15px; margin-bottom: 16px; color: var(--ui-primary, #2dd4bf); }
   .section { margin-bottom: 20px; }
   .section-title {
     font-size: 12px;
-    color: var(--text-muted, #6c7086);
+    color: var(--ui-text-muted, #8494b3);
     text-transform: uppercase;
     letter-spacing: 0.5px;
     margin-bottom: 8px;
   }
-  .card {
-    background: var(--bg-secondary, #313244);
-    border-radius: 8px;
-    padding: 12px;
-    margin-bottom: 8px;
-  }
-  .card .label { font-size: 11px; color: var(--text-muted, #6c7086); }
-  .card .value { margin-top: 4px; word-break: break-all; }
-  .tag {
-    display: inline-block;
-    padding: 2px 8px;
-    border-radius: 4px;
-    font-size: 11px;
-    margin-right: 4px;
-    margin-top: 4px;
-  }
-  .tag-success { background: rgba(166, 227, 161, 0.15); color: #a6e3a1; }
-  .tag-warn { background: rgba(249, 226, 175, 0.2); color: #f9e2af; }
+  .card-stack { display: flex; flex-direction: column; gap: 8px; }
+  .label { font-size: 11px; color: var(--ui-text-muted, #8494b3); }
+  .value { margin-top: 4px; word-break: break-all; }
+  .tag-row { display: flex; flex-wrap: wrap; gap: 4px; }
+  .note { margin-top: 8px; font-size: 12px; color: var(--ui-text-muted, #8494b3); }
 </style>
 </head>
 <body>
-  <h2>📊 模板 - 右侧面板</h2>
+  <ui-page padding="sm">
+    <h2>📊 模板 - 右侧面板</h2>
 
-  <div class="section">
-    <div class="section-title">基本信息</div>
-    <div class="card">
-      <div class="label">插件ID</div>
-      <div class="value">template</div>
-    </div>
-    <div class="card">
-      <div class="label">注册方式</div>
-      <div class="value">ui.registerRightPanelTab()</div>
-    </div>
-  </div>
-
-  <div class="section">
-    <div class="section-title">适用场景</div>
-    <div class="card">
-      <div>
-        <span class="tag tag-success">会话分析</span>
-        <span class="tag tag-success">日志查看</span>
-        <span class="tag tag-warn">性能监控</span>
-        <span class="tag tag-success">自定义工具</span>
-      </div>
-      <div style="margin-top:8px;font-size:12px;color:var(--text-muted, #6c7086);">
-        右侧面板适合展示当前会话相关的辅助功能，如会话分析、日志查看、性能图表等。所有连接类型下均可见。
+    <div class="section">
+      <div class="section-title">基本信息</div>
+      <div class="card-stack">
+        <ui-card shadow="never">
+          <div class="label">插件ID</div>
+          <div class="value">template</div>
+        </ui-card>
+        <ui-card shadow="never">
+          <div class="label">注册方式</div>
+          <div class="value">ui.registerRightPanelTab()</div>
+        </ui-card>
       </div>
     </div>
-  </div>
+
+    <div class="section">
+      <div class="section-title">适用场景</div>
+      <ui-card shadow="never">
+        <div class="tag-row">
+          <ui-tag type="success">会话分析</ui-tag>
+          <ui-tag type="success">日志查看</ui-tag>
+          <ui-tag type="warning">性能监控</ui-tag>
+          <ui-tag type="success">自定义工具</ui-tag>
+        </div>
+        <div class="note">
+          右侧面板适合展示当前会话相关的辅助功能，如会话分析、日志查看、性能图表等。所有连接类型下均可见。
+        </div>
+      </ui-card>
+    </div>
+  </ui-page>
+
+  <script src="./_sdk/plugin-ui.js"></script>
 </body>
 </html>
