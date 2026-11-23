@@ -666,6 +666,11 @@ const App = {
       try { storeBridge.set('lastConnId', id) } catch (_) {}
       sr.subjects = []; msg.records = []
     }
+    function dblConnect(c) {
+      // 双击即连接（与宿主「单击只选中、双击才连接」的既定交互一致）
+      if (connId.value !== c.id) selectConnection(c.id)
+      if (!session.id && !session.connecting) connect()
+    }
     async function persistConns() { try { await storeBridge.set('connections', connections.value); return true } catch (_) { return false } }
     function openEditor(c) {
       Object.assign(editor, { open: true, id: c ? c.id : '', name: c ? c.name : '', brokers: c ? c.brokers : '127.0.0.1:9092', clientId: c ? (c.clientId || 'newshell-kafka-studio') : 'newshell-kafka-studio', saslUser: c ? (c.saslUser || '') : '', saslPass: c ? (c.saslPass || '') : '', srUrl: c ? (c.srUrl || '') : '', testing: false, testMsg: '', testOk: false })
@@ -724,7 +729,7 @@ const App = {
     }
 
     /* ---------- 消息 ---------- */
-    const msg = reactive({ topic: '', partition: 0, parts: [], mode: 'latest', count: 50, offset: 0, decode: 'text', fKey: '', fVal: '', records: [], loading: false, expanded: -1, streaming: false, intervalMs: 2000, nextOffset: 0, hw: 0 })
+    const msg = reactive({ topic: '', partition: 0, parts: [], mode: 'latest', count: 50, offset: 0, decode: 'text', fKey: '', fVal: '', records: [], loading: false, expanded: -1, streaming: false, intervalMs: 2000, nextOffset: 0, hw: 0, prodKey: '', prodValue: '', prodSending: false })
     let streamTimer = null
     async function msgLoadParts() {
       msg.parts = []
@@ -783,6 +788,18 @@ const App = {
       streamTimer = setInterval(streamTick, Math.max(500, Number(msg.intervalMs) || 2000))
     }
     function stopStream() { msg.streaming = false; if (streamTimer) { clearInterval(streamTimer); streamTimer = null } }
+    async function sendMessage() {
+      if (!msg.topic) return toast('请选择 Topic')
+      if (!msg.prodValue) return toast('请填写消息内容（Value）')
+      msg.prodSending = true
+      try {
+        const r = await kcall('produce', { topic: msg.topic, partition: msg.partition, key: msg.prodKey || null, value: msg.prodValue })
+        toast('已发送到 ' + msg.topic + ' 分区 ' + msg.partition + (r.baseOffset >= 0 ? '，Offset ' + r.baseOffset : ''))
+        msg.prodValue = ''
+        msgLoadParts()
+      } catch (e) { toast('发送失败：' + e.message) }
+      msg.prodSending = false
+    }
 
     /* ---------- 消费组 ---------- */
     const grp = reactive({ list: [], loading: false, detail: null, offsets: [], busy: false })
@@ -957,6 +974,12 @@ const App = {
           h(ElInput, { modelValue: msg.fVal, 'onUpdate:modelValue': (v) => (msg.fVal = v), size: 'small', placeholder: '按 Value 过滤（包含）…', clearable: true, style: { width: '240px' } }),
           h('span', { class: 'toolbar-hint' }, '共 ' + msg.records.length + ' 条' + (msg.hw ? ' · 高水位 ' + msg.hw : '') + '（过滤在拉取后点「拉取」生效，流式实时生效）')
         ]),
+        h('div', { class: 'msg-filters' }, [
+          h('span', { class: 'block-label-inline' }, '发送'),
+          h(ElInput, { modelValue: msg.prodKey, 'onUpdate:modelValue': (v) => (msg.prodKey = v), size: 'small', placeholder: 'Key（可选）', clearable: true, style: { width: '180px' } }),
+          h(ElInput, { modelValue: msg.prodValue, 'onUpdate:modelValue': (v) => (msg.prodValue = v), size: 'small', placeholder: 'Value 消息内容（UTF-8 文本）', style: { flex: '1', minWidth: '220px' }, onKeyup: (e) => { if (e.key === 'Enter') sendMessage() } }),
+          h(ElButton, { type: 'primary', size: 'small', loading: msg.prodSending, onClick: sendMessage }, () => '发送到所选分区')
+        ]),
         msg.records.length ? h('div', msg.records.map((rec, i) => {
           if (rec.placeholder) return h('div', { class: 'rec-item' }, [h('div', { class: 'rec-head static' }, [h(ElTag, { type: 'warning', size: 'small', effect: 'light', round: true }, () => '压缩批次'), h('span', rec.note + '（起始 Offset ' + rec.baseOffset + '，约 ' + rec.count + ' 条）')])])
           const expanded = msg.expanded === i
@@ -1111,7 +1134,7 @@ const App = {
           h('span', { class: 'flex-spacer' }),
           h(ElButton, { circle: true, size: 'small', icon: I.Plus, title: '新建连接', onClick: () => openEditor(null) })
         ]),
-        connections.value.length ? h(ElScrollbar, { class: 'side-scroll' }, () => connections.value.map((c) => h('div', { class: ['conn-item', { active: c.id === connId.value }], onClick: () => selectConnection(c.id) }, [
+        connections.value.length ? h(ElScrollbar, { class: 'side-scroll' }, () => connections.value.map((c) => h('div', { class: ['conn-item', { active: c.id === connId.value }], onClick: () => selectConnection(c.id), onDblclick: () => dblConnect(c) }, [
           h('span', { class: 'conn-avatar' }, (c.name || '?').slice(0, 1).toUpperCase()),
           h('span', { class: 'conn-meta' }, [
             h('span', { class: 'conn-name' }, c.name),

@@ -230,7 +230,7 @@
       "name": "GitLab 管理台",
       "description": "浏览 GitLab 项目与代码、评审合并请求、查看流水线并处理 Issue。多连接在主页内管理，API 经插件主进程本地代理转发（REST API v4）。",
       "author": "xyl",
-      "latestVersion": "1.3.2",
+      "latestVersion": "1.3.3",
       "tags": [
         "GitLab",
         "代码评审",
@@ -291,6 +291,12 @@
           "downloadUrl": "https://raw.githubusercontent.com/xyl912158708/newshell-plugin-registry/main/plugins/gitlab-console/gitlab-console-v1.3.2.zip",
           "minAppVersion": "2.6.0",
           "releaseDate": "2026-11-22"
+        },
+        {
+          "version": "1.3.3",
+          "downloadUrl": "https://raw.githubusercontent.com/xyl912158708/newshell-plugin-registry/main/plugins/gitlab-console/gitlab-console-v1.3.3.zip",
+          "minAppVersion": "2.6.0",
+          "releaseDate": "2026-11-23"
         }
       ]
     },
@@ -299,7 +305,7 @@
       "name": "Kafka Studio",
       "description": "Kafka 巡检与运维：Topic/Broker 与消费组 Lag 巡检，多通道过滤检索与流式消费消息并解码 payload，管理 Offset、ACL 与 Schema Registry。Kafka 协议由插件主进程手写客户端实现。",
       "author": "xyl",
-      "latestVersion": "1.3.2",
+      "latestVersion": "1.3.3",
       "tags": [
         "Kafka",
         "消息队列",
@@ -366,6 +372,12 @@
           "downloadUrl": "https://raw.githubusercontent.com/xyl912158708/newshell-plugin-registry/main/plugins/kafka-studio/kafka-studio-v1.3.2.zip",
           "minAppVersion": "2.6.0",
           "releaseDate": "2026-11-22"
+        },
+        {
+          "version": "1.3.3",
+          "downloadUrl": "https://raw.githubusercontent.com/xyl912158708/newshell-plugin-registry/main/plugins/kafka-studio/kafka-studio-v1.3.3.zip",
+          "minAppVersion": "2.6.0",
+          "releaseDate": "2026-11-23"
         }
       ]
     }

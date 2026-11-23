@@ -114,6 +114,16 @@ const App = {
     const curConn = computed(() => connections.value.find((c) => c.id === connId.value) || null)
     const editor = reactive({ open: false, id: '', name: '', baseUrl: '', token: '', allowInsecure: false, testing: false, testMsg: '', testOk: false })
     function cfgOf(c) { return c ? { baseUrl: c.baseUrl, token: c.token, allowInsecure: !!c.allowInsecure } : null }
+    function copyText(t) {
+      const fallback = () => { const ta = document.createElement('textarea'); ta.value = t; ta.style.position = 'fixed'; ta.style.opacity = '0'; document.body.appendChild(ta); ta.select(); try { document.execCommand('copy') } catch (_) {} ta.remove() }
+      try { const p = navigator.clipboard && navigator.clipboard.writeText(t); if (p && p.catch) p.catch(fallback) } catch (_) { fallback() }
+    }
+    function openExternal(url) {
+      if (!url) return
+      let w = null
+      try { w = window.open(url, '_blank') } catch (_) { w = null }
+      if (!w) { copyText(url); toast('宿主未放行新窗口，链接已复制，请粘贴到浏览器打开') }
+    }
     async function api(method, path, query, body, conn) {
       const cfg = cfgOf(conn || curConn.value)
       if (!cfg) throw new Error('请先选择连接')
@@ -185,6 +195,7 @@ const App = {
     const curProject = ref(null)
     function resetProjectState() {
       curProject.value = null; projects.value = []
+      projView.value = 'files'; commits.list = []
       tree.path = ''; tree.items = []; tree.ref = ''; branches.value = []
       fileView.open = false; readme.html = ''
       mr.list = []; pipe.list = []; issue.list = []
@@ -204,12 +215,27 @@ const App = {
     }
     function openProject(p) {
       curProject.value = p
+      projView.value = 'files'; commits.list = []
       tree.ref = p.default_branch || 'main'
       tree.path = ''; fileView.open = false
       loadBranches(); loadTree(''); loadReadme()
       if (tab.value === 'mr') loadMrs(true)
       if (tab.value === 'pipeline') loadPipes(true)
       if (tab.value === 'issue') loadIssues(true)
+      resize()
+    }
+    const projView = ref('files')
+    const commits = reactive({ list: [], loading: false, page: 1, hasMore: false })
+    async function loadCommits(reset) {
+      if (!curProject.value) return
+      if (reset) { commits.page = 1; commits.list = [] }
+      commits.loading = true
+      try {
+        const r = await api('GET', '/projects/' + curProject.value.id + '/repository/commits', { ref_name: tree.ref, per_page: 50, page: commits.page })
+        commits.list = reset ? r.data : commits.list.concat(r.data)
+        commits.hasMore = r.data.length >= 50
+      } catch (e) { toast('加载提交记录失败：' + e.message); if (reset) commits.list = [] }
+      commits.loading = false
       resize()
     }
     const branches = ref([])
@@ -461,12 +487,28 @@ const App = {
           p.visibility ? h(ElTag, { size: 'small', effect: 'plain', round: true }, () => p.visibility) : null,
           h('span', { class: 'flex-spacer' }),
           h('span', { class: 'field-label' }, '分支'),
-          h(ElSelect, { modelValue: tree.ref, 'onUpdate:modelValue': (v) => { tree.ref = v; fileView.open = false; loadTree(tree.path); loadReadme() }, size: 'small', style: { width: '170px' } }, () =>
+          h(ElSelect, { modelValue: tree.ref, 'onUpdate:modelValue': (v) => { tree.ref = v; fileView.open = false; loadTree(tree.path); loadReadme(); if (projView.value === 'commits') loadCommits(true) }, size: 'small', style: { width: '170px' } }, () =>
             branches.value.map((b) => h(ElOption, { label: b, value: b })))
         ]),
         p.description ? h('div', { class: 'proj-desc' }, p.description) : null,
-        h('div', { class: 'crumbs' }, crumbs),
-        body
+        h('div', { class: 'tab-toolbar' }, [
+          h(ElSegmented, { modelValue: projView.value, 'onUpdate:modelValue': (v) => { projView.value = v; if (v === 'commits' && !commits.list.length) loadCommits(true) }, size: 'small', options: [{ label: '文件', value: 'files' }, { label: '提交记录', value: 'commits' }] }),
+          h('span', { class: 'flex-spacer' }),
+          projView.value === 'commits' ? h(ElButton, { size: 'small', icon: I.Refresh, loading: commits.loading, onClick: () => loadCommits(true) }, () => '刷新') : null
+        ]),
+        projView.value === 'commits' ? h('div', [
+          commits.loading && !commits.list.length ? h('div', { class: 'empty-line' }, '加载中…') :
+          commits.list.length ? h('div', { class: 'file-list' }, commits.list.map((c) => h('div', { class: 'file-row', title: '在 GitLab 打开此提交', onClick: () => openExternal(p.web_url + '/-/commit/' + c.id) }, [
+            h('span', { class: 'mono', style: { color: 'var(--el-color-primary)', flex: '0 0 76px' } }, (c.short_id || (c.id || '').slice(0, 8))),
+            h('span', { class: 'file-name' }, c.title || '(无标题)'),
+            h('span', { class: 'muted', style: { fontSize: '12px' } }, c.author_name || ''),
+            h('span', { class: 'muted', style: { fontSize: '12px', flex: '0 0 auto' } }, relTime(c.created_at))
+          ]))) : h('div', { class: 'empty-line' }, '该分支暂无提交记录'),
+          commits.hasMore ? h('div', { style: { textAlign: 'center', padding: '8px' } }, [h(ElButton, { size: 'small', text: true, loading: commits.loading, onClick: () => { commits.page++; loadCommits(false) } }, () => '加载更多提交')]) : null
+        ]) : h('div', [
+          h('div', { class: 'crumbs' }, crumbs),
+          body
+        ])
       ])
     }
 
@@ -673,7 +715,7 @@ const App = {
           projects.value.map((p) => h(ElOption, { label: p.path_with_namespace || p.name, value: String(p.id) }))),
         projPage.totalPages > 1 && projects.value.length < projPage.total ? h(ElButton, { size: 'small', text: true, loading: projLoading.value, onClick: () => { projPage.page++; loadProjects(false) } }, () => '加载更多项目') : null,
         h('span', { class: 'flex-spacer' }),
-        curProject.value && curProject.value.web_url ? h(ElButton, { size: 'small', text: true, type: 'primary', onClick: () => window.open(curProject.value.web_url, '_blank') }, () => '在 GitLab 打开') : null
+        curProject.value && curProject.value.web_url ? h(ElButton, { size: 'small', text: true, type: 'primary', onClick: () => openExternal(curProject.value.web_url) }, () => '在 GitLab 打开') : null
       ])
       const main = h('main', { class: 'main' }, [
         projBar,

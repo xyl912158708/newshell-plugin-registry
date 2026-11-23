@@ -134,3 +134,29 @@ object-storage 1.4.0 → 1.4.1）：
    报错，不再假报成功。注：宿主侧 S2 校验只收字符串本身偏严
    （旧插件生态普遍发数字），建议宿主侧同步放宽为字符串或数字，
    但插件侧改完后不依赖宿主放宽。
+
+## 2026-11-23 第五轮：Kafka / GitLab 功能缺陷五则（1.3.3）
+
+- **Kafka 双击连接**：连接项新增双击处理（单击仍只选中），双击即
+  选中并连接集群，不必再点侧栏底部「连接集群」按钮（按钮保留）。
+- **Kafka 历史消息拉不到**：两个根因。其一，压缩批次只显示占位——
+  宿主沙箱不放行 zlib 曾被当作无解，现以纯 JS 解压补齐 gzip
+  （自研 DEFLATE）、snappy、lz4 帧三格式（zstd 仍占位提示）；其二，
+  parseRecordBatch 批次结束偏移少跳 4 字节，多批次拉取时第二批起
+  全部错位丢失，现以 batchLen 精确收尾。解压与 CRC32C 均有本地
+  向量/回环测试（gzip 三种块型、snappy 字面+拷贝、lz4 帧/块、
+  CRC32C 标准向量、Produce 批次经 Fetch 解析回环、gzip 批次端到端）。
+- **Kafka 无法推送消息**：原先根本没有 Produce 实现（页面无入口、
+  代理无 op）。现补齐：main.js 新增 Produce v7 + RecordBatch v2
+  编码（CRC32C 校验），消息页新增发送行（Key 可选 + Value + 发送到
+  所选分区，回车亦可发送），发送后回显 Offset 并刷新分区水位。
+- **GitLab 没有提交记录**：原项目页只有文件浏览。现新增「文件 /
+  提交记录」分段切换：按当前分支拉取 commits（每页 50 条、可加载
+  更多），列短 SHA/标题/作者/相对时间，点行在 GitLab 打开该提交；
+  切换分支时自动刷新。
+- **GitLab「在 GitLab 打开」无反应**：根因在宿主——插件 iframe 的
+  sandbox 为 `allow-scripts allow-same-origin`，未放行 allow-popups，
+  window.open 被浏览器静默拦截。插件侧改 openExternal 封装：打开
+  失败时自动复制链接并提示粘贴到浏览器。彻底修复需宿主给 iframe
+  sandbox 加 allow-popups（或新增 open-external 桥动作），已记录
+  待宿主侧处理。

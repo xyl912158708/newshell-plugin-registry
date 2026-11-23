@@ -81,27 +81,7 @@ function readHeaderKV(r) {
   const vl = r.varint(); const v = vl >= 0 ? r.buf.subarray(r.off, r.off + vl) : null; if (vl >= 0) r.off += vl
   return { key: k, value: v }
 }
-function parseRecordBatch(r, out, limit) {
-  const baseOffset = r.i64()
-  const batchLen = r.i32()
-  const batchStart = r.off
-  r.i32() // partitionLeaderEpoch
-  const magic = r.i8()
-  if (magic !== 2) throw new Error('内部错误：batch magic=' + magic)
-  r.u32() // crc
-  const attrs = r.i16()
-  const codec = attrs & 0x7
-  const timestampType = (attrs >> 3) & 1
-  r.i32() // lastOffsetDelta
-  const firstTs = r.i64()
-  const maxTs = r.i64()
-  r.i64(); r.i16(); r.i32() // producerId/epoch/baseSequence
-  const count = r.i32()
-  if (codec !== 0) {
-    out.push({ placeholder: true, codec, count, baseOffset, note: '该批次使用压缩（codec=' + codec + '：' + ({ 1: 'gzip', 2: 'snappy', 3: 'lz4', 4: 'zstd' }[codec] || '未知') + '），插件沙箱无 zlib，无法解压' })
-    r.off = batchStart + batchLen - 4
-    return
-  }
+function parseBatchRecords(r, baseOffset, timestampType, firstTs, maxTs, count, out, limit) {
   for (let i = 0; i < count && out.length < limit; i++) {
     r.varint() // record length
     r.i8() // attributes
@@ -120,7 +100,41 @@ function parseRecordBatch(r, out, limit) {
       headers: headers.map((hh) => ({ key: hh.key, value: hh.value ? hh.value.toString('base64') : null }))
     })
   }
-  if (r.off < batchStart + batchLen - 4) r.off = batchStart + batchLen - 4
+}
+function parseRecordBatch(r, out, limit) {
+  const baseOffset = r.i64()
+  const batchLen = r.i32()
+  const batchStart = r.off
+  const batchEnd = batchStart + batchLen
+  r.i32() // partitionLeaderEpoch
+  const magic = r.i8()
+  if (magic !== 2) throw new Error('内部错误：batch magic=' + magic)
+  r.u32() // crc
+  const attrs = r.i16()
+  const codec = attrs & 0x7
+  const timestampType = (attrs >> 3) & 1
+  r.i32() // lastOffsetDelta
+  const firstTs = r.i64()
+  const maxTs = r.i64()
+  r.i64(); r.i16(); r.i32() // producerId/epoch/baseSequence
+  const count = r.i32()
+  if (codec !== 0) {
+    // 压缩批次：宿主插件沙箱不放行 zlib，改用内置纯 JS 解压（gzip/snappy/lz4）
+    const compBytes = r.buf.subarray(r.off, batchEnd)
+    let plain = null
+    try { plain = decompressByCodec(codec, compBytes) } catch (_) { plain = null }
+    if (!plain) {
+      out.push({ placeholder: true, codec, count, baseOffset, note: '该批次使用压缩（codec=' + codec + '：' + ({ 1: 'gzip', 2: 'snappy', 3: 'zstd', 4: 'lz4' }[codec] || '未知') + '）' + (codec === 3 ? '，zstd 暂不支持解压' : '，解压失败') })
+      r.off = batchEnd
+      return
+    }
+    parseBatchRecords(new Reader(plain), baseOffset, timestampType, firstTs, maxTs, count, out, limit)
+    r.off = batchEnd
+    return
+  }
+  parseBatchRecords(r, baseOffset, timestampType, firstTs, maxTs, count, out, limit)
+  // 批次结束位置以 batchLen 为准（旧实现少跳 4 字节，多批次时后续批次全错位丢失）
+  r.off = batchEnd
 }
 function parseMessageSetMessage(r, out, limit) {
   const offset = r.i64()
@@ -136,7 +150,14 @@ function parseMessageSetMessage(r, out, limit) {
   const key = r.bytes()
   const val = r.bytes()
   if (codec !== 0) {
-    out.push({ placeholder: true, codec, count: 1, baseOffset: offset, note: '压缩消息（codec=' + codec + '），插件沙箱无法解压' })
+    // 旧格式压缩消息：value 是内层消息集，纯 JS 解压后递归解析；
+    // 内层 offset 为相对值，按 Kafka 约定以包装消息 offset 为末条对齐
+    let inner = null
+    try { const plain = decompressByCodec(codec, val); if (plain) inner = parseRecords(plain, limit) } catch (_) { inner = null }
+    if (inner && inner.length) {
+      const real = inner.filter((x) => !x.placeholder)
+      real.forEach((rec, idx) => { rec.offset = offset - (real.length - 1) + idx; out.push(rec) })
+    } else out.push({ placeholder: true, codec, count: 1, baseOffset: offset, note: '压缩消息（codec=' + codec + '）' + (codec === 3 ? '，zstd 暂不支持解压' : '，解压失败') })
   } else out.push({ offset, timestamp: ts, key: key ? key.toString('base64') : null, value: val ? val.toString('base64') : null, headers: [] })
   r.off = msgStart + size
 }
@@ -157,8 +178,212 @@ function parseRecords(buf, limit) {
   return out
 }
 
+/* ================= 纯 JS 解压（沙箱不放行 zlib） =================
+ * gzip = DEFLATE（RFC1951）+ gzip 头尾剥离；snappy = 原始块格式；
+ * lz4 = Kafka 使用的 LZ4 帧格式（校验和一律跳过不验，含 Kafka 历史
+ * 帧校验怪癖亦不影响解压）。zstd 无纯 JS 实现，仍走占位提示。 */
+function snappyDecompress(buf) {
+  let pos = 0
+  // 前缀：未压缩长度（LEB128 无符号 varint，非 zigzag）
+  let total = 0, shift = 0
+  for (;;) { const b = buf[pos++]; total |= (b & 0x7f) << shift; if (!(b & 0x80)) break; shift += 7 }
+  const out = []
+  while (pos < buf.length) {
+    const tag = buf[pos++]
+    const type = tag & 0x03
+    if (type === 0) {
+      let len = tag >> 2
+      if (len >= 60) { const n = len - 59; len = 0; for (let i = 0; i < n; i++) len |= buf[pos++] << (8 * i) }
+      len += 1
+      for (let i = 0; i < len; i++) out.push(buf[pos++])
+    } else {
+      let len, off
+      if (type === 1) { len = 4 + ((tag >> 2) & 0x7); off = ((tag >> 5) << 8) | buf[pos++] }
+      else if (type === 2) { len = 1 + (tag >> 2); off = buf[pos] | (buf[pos + 1] << 8); pos += 2 }
+      else { len = 1 + (tag >> 2); off = (buf[pos] | (buf[pos + 1] << 8) | (buf[pos + 2] << 16) | (buf[pos + 3] << 24)) >>> 0; pos += 4 }
+      if (off <= 0 || off > out.length) throw new Error('snappy 偏移无效')
+      for (let i = 0; i < len; i++) out.push(out[out.length - off])
+    }
+  }
+  if (out.length !== total) throw new Error('snappy 长度不符')
+  return Buffer.from(out)
+}
+function inflateRaw(buf) {
+  let bytePos = 0, curByte = 0, curBits = 0
+  const out = []
+  function bits(n) {
+    let v = 0, got = 0
+    while (got < n) {
+      if (curBits === 0) { curByte = buf[bytePos++]; curBits = 8 }
+      const take = Math.min(curBits, n - got)
+      v |= (curByte & ((1 << take) - 1)) << got
+      curByte >>= take; curBits -= take; got += take
+    }
+    return v
+  }
+  function buildHuff(lengths) {
+    const maxBits = Math.max.apply(null, lengths.concat([0]))
+    const blCount = new Array(maxBits + 1).fill(0)
+    for (const l of lengths) if (l) blCount[l]++
+    const nextCode = new Array(maxBits + 1).fill(0)
+    let code = 0
+    for (let b = 1; b <= maxBits; b++) { code = (code + blCount[b - 1]) << 1; nextCode[b] = code }
+    const map = new Map()
+    lengths.forEach((l, sym) => { if (l) map.set(l + ':' + nextCode[l]++, sym) })
+    return { map, maxBits }
+  }
+  function decode(h) {
+    let code = 0
+    for (let l = 1; l <= h.maxBits; l++) { code = (code << 1) | bits(1); const s = h.map.get(l + ':' + code); if (s !== undefined) return s }
+    throw new Error('inflate：无效 Huffman 码')
+  }
+  const LEN_BASE = [3, 4, 5, 6, 7, 8, 9, 10, 11, 13, 15, 17, 19, 23, 27, 31, 35, 43, 51, 59, 67, 83, 99, 115, 131, 163, 195, 227, 258]
+  const LEN_EXT = [0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 2, 2, 2, 2, 3, 3, 3, 3, 4, 4, 4, 4, 5, 5, 5, 5, 0]
+  const DIST_BASE = [1, 2, 3, 4, 5, 7, 9, 13, 17, 25, 33, 49, 65, 97, 129, 193, 257, 385, 513, 769, 1025, 1537, 2049, 3073, 4097, 6145, 8193, 12289, 16385, 24577]
+  const DIST_EXT = [0, 0, 0, 0, 1, 1, 2, 2, 3, 3, 4, 4, 5, 5, 6, 6, 7, 7, 8, 8, 9, 9, 10, 10, 11, 11, 12, 12, 13, 13]
+  function compressedBlock(litH, distH) {
+    for (;;) {
+      const sym = decode(litH)
+      if (sym < 256) { out.push(sym); continue }
+      if (sym === 256) return
+      const li = sym - 257
+      const len = LEN_BASE[li] + bits(LEN_EXT[li])
+      const dsym = decode(distH)
+      const dist = DIST_BASE[dsym] + bits(DIST_EXT[dsym])
+      if (dist > out.length) throw new Error('inflate：距离越界')
+      for (let i = 0; i < len; i++) out.push(out[out.length - dist])
+    }
+  }
+  for (;;) {
+    const bfinal = bits(1)
+    const btype = bits(2)
+    if (btype === 0) {
+      curBits = 0 // 对齐到字节边界
+      const len = buf[bytePos] | (buf[bytePos + 1] << 8)
+      bytePos += 4 // LEN + NLEN
+      for (let i = 0; i < len; i++) out.push(buf[bytePos++])
+    } else if (btype === 1) {
+      const litLen = []
+      for (let i = 0; i < 288; i++) litLen.push(i < 144 ? 8 : i < 256 ? 9 : i < 280 ? 7 : 8)
+      compressedBlock(buildHuff(litLen), buildHuff(new Array(32).fill(5)))
+    } else if (btype === 2) {
+      const hlit = bits(5) + 257
+      const hdist = bits(5) + 1
+      const hclen = bits(4) + 4
+      const ORDER = [16, 17, 18, 0, 8, 7, 9, 6, 10, 5, 11, 4, 12, 3, 13, 2, 14, 1, 15]
+      const clLen = new Array(19).fill(0)
+      for (let i = 0; i < hclen; i++) clLen[ORDER[i]] = bits(3)
+      const clH = buildHuff(clLen)
+      const lens = []
+      while (lens.length < hlit + hdist) {
+        const s = decode(clH)
+        if (s < 16) lens.push(s)
+        else if (s === 16) { const prev = lens[lens.length - 1]; const rep = 3 + bits(2); for (let i = 0; i < rep; i++) lens.push(prev) }
+        else if (s === 17) { const rep = 3 + bits(3); for (let i = 0; i < rep; i++) lens.push(0) }
+        else { const rep = 11 + bits(7); for (let i = 0; i < rep; i++) lens.push(0) }
+      }
+      compressedBlock(buildHuff(lens.slice(0, hlit)), buildHuff(lens.slice(hlit)))
+    } else throw new Error('inflate：无效块类型')
+    if (bfinal) break
+  }
+  return Buffer.from(out)
+}
+function gunzipPure(buf) {
+  if (!buf || buf.length < 18 || buf[0] !== 0x1f || buf[1] !== 0x8b || buf[2] !== 8) throw new Error('gzip 头无效')
+  const flg = buf[3]
+  let off = 10
+  if (flg & 0x04) { const xlen = buf[off] | (buf[off + 1] << 8); off += 2 + xlen }
+  if (flg & 0x08) { while (buf[off++] !== 0) { if (off > buf.length) throw new Error('gzip 头越界') } }
+  if (flg & 0x10) { while (buf[off++] !== 0) { if (off > buf.length) throw new Error('gzip 头越界') } }
+  if (flg & 0x02) off += 2
+  return inflateRaw(buf.subarray(off, buf.length - 8))
+}
+function lz4BlockDecompress(buf) {
+  const out = []
+  let i = 0
+  while (i < buf.length) {
+    const token = buf[i++]
+    let litLen = token >> 4
+    if (litLen === 15) { let b; do { b = buf[i++]; litLen += b } while (b === 255) }
+    for (let j = 0; j < litLen; j++) out.push(buf[i++])
+    if (i >= buf.length) break
+    const off = buf[i] | (buf[i + 1] << 8); i += 2
+    if (off <= 0 || off > out.length) throw new Error('lz4 偏移无效')
+    let matchLen = token & 0x0f
+    if (matchLen === 15) { let b; do { b = buf[i++]; matchLen += b } while (b === 255) }
+    matchLen += 4
+    for (let j = 0; j < matchLen; j++) out.push(out[out.length - off])
+  }
+  return Buffer.from(out)
+}
+function lz4FrameDecompress(buf) {
+  if (!buf || buf.length < 7 || buf.readUInt32LE(0) !== 0x184d2204) throw new Error('LZ4 帧头无效')
+  let off = 4
+  const flg = buf[off++]
+  off++ // BD
+  const hasBlockChecksum = (flg >> 4) & 1
+  const hasContentSize = (flg >> 3) & 1
+  if (hasContentSize) off += 8
+  off++ // 头校验字节（不验）
+  const chunks = []
+  for (;;) {
+    if (off + 4 > buf.length) throw new Error('LZ4 帧截断')
+    const blockSize = buf.readUInt32LE(off); off += 4
+    if (blockSize === 0) break
+    const raw = (blockSize & 0x80000000) !== 0
+    const size = blockSize & 0x7fffffff
+    const data = buf.subarray(off, off + size); off += size
+    if (hasBlockChecksum) off += 4
+    chunks.push(raw ? Buffer.from(data) : lz4BlockDecompress(data))
+  }
+  return Buffer.concat(chunks)
+}
+function decompressByCodec(codec, buf) {
+  if (!buf) return null
+  if (codec === 1) return gunzipPure(buf)
+  if (codec === 2) return snappyDecompress(buf)
+  if (codec === 4) return lz4FrameDecompress(buf)
+  return null // zstd(3) 等暂不支持
+}
+
+/* ================= CRC32C（Produce 记录批次校验） ================= */
+const CRC32C_TABLE = (() => {
+  const t = []
+  for (let n = 0; n < 256; n++) { let c = n; for (let k = 0; k < 8; k++) c = c & 1 ? (0x82f63b78 ^ (c >>> 1)) : (c >>> 1); t[n] = c >>> 0 }
+  return t
+})()
+function crc32c(buf) {
+  let c = 0xffffffff
+  for (let i = 0; i < buf.length; i++) c = CRC32C_TABLE[(c ^ buf[i]) & 0xff] ^ (c >>> 8)
+  return (c ^ 0xffffffff) >>> 0
+}
+function buildRecordBatch(keyBuf, valBuf, ts) {
+  const fields = new Writer()
+  fields.i8(0) // attributes
+  fields.varint(0) // timestampDelta
+  fields.varint(0) // offsetDelta
+  if (keyBuf) { fields.varint(keyBuf.length); fields.push(keyBuf) } else fields.varint(-1)
+  if (valBuf) { fields.varint(valBuf.length); fields.push(valBuf) } else fields.varint(-1)
+  fields.varint(0) // headers count
+  const fbuf = fields.build()
+  const rec = new Writer().varint(fbuf.length); rec.push(fbuf)
+  const body = new Writer()
+  body.i32(-1) // partitionLeaderEpoch
+  body.i8(2) // magic v2
+  body.u32(0) // crc 占位，下方回填（覆盖 attributes 起的全部字节）
+  body.i16(0) // attributes：无压缩、CreateTime
+  body.i32(0) // lastOffsetDelta（单条记录）
+  body.i64(ts); body.i64(ts) // first/max timestamp
+  body.i64(-1); body.i16(-1); body.i32(-1) // producerId/epoch/baseSequence
+  body.i32(1) // records count
+  body.push(rec.build())
+  const bodyBuf = body.build()
+  bodyBuf.writeUInt32BE(crc32c(bodyBuf.subarray(9)), 5)
+  return Buffer.concat([new Writer().i64(0).i32(bodyBuf.length).build(), bodyBuf])
+}
+
 /* ================= Kafka 连接 ================= */
-const API = { Fetch: 1, ListOffsets: 2, Metadata: 3, OffsetCommit: 8, OffsetFetch: 9, FindCoordinator: 10, DescribeGroups: 15, ListGroups: 16, SaslHandshake: 17, ApiVersions: 18, CreateAcls: 30, DeleteAcls: 31, DescribeAcls: 29, SaslAuthenticate: 36 }
+const API = { Produce: 0, Fetch: 1, ListOffsets: 2, Metadata: 3, OffsetCommit: 8, OffsetFetch: 9, FindCoordinator: 10, DescribeGroups: 15, ListGroups: 16, SaslHandshake: 17, ApiVersions: 18, CreateAcls: 30, DeleteAcls: 31, DescribeAcls: 29, SaslAuthenticate: 36 }
 class KafkaConnection {
   constructor(host, port, clientId, sasl) {
     this.host = host; this.port = port; this.clientId = clientId || 'newshell-kafka-studio'; this.sasl = sasl
@@ -265,6 +490,17 @@ function reqFetch(conn, topic, partition, offset, maxBytes, limit) {
       result.error = p.error; result.highWatermark = p.hw; result.records = parseRecords(p.recordsBytes, limit)
     }
     return result
+  })
+}
+function reqProduce(conn, topic, partition, keyBuf, valBuf) {
+  const batch = buildRecordBatch(keyBuf, valBuf, Date.now())
+  const w = new Writer().str(null).i16(-1).i32(10000) // transactionalId, acks=all, timeoutMs
+  w.i32(1).str(topic).i32(1).i32(partition).bytes(batch)
+  return conn.rawRequest(API.Produce, 7, w.build(), (r) => {
+    const topics = r.array(() => ({ name: r.str(), partitions: r.array(() => ({ partition: r.i32(), error: r.i16(), baseOffset: r.i64(), logAppendTime: r.i64(), logStartOffset: r.i64() })) }))
+    r.i32() // throttle_time_ms（v7 在 topics 之后）
+    for (const t of topics || []) for (const p of t.partitions) return p
+    return { error: 0, baseOffset: -1 }
   })
 }
 function reqFindCoordinator(conn, groupId) {
@@ -429,6 +665,19 @@ async function handleKafkaOp(session, op, params) {
       if (!meta) throw new Error('分区不存在')
       const conn = await session.brokerConn(meta.leader)
       const r = await reqFetch(conn, params.topic, params.partition, params.offset, params.maxBytes || 1024 * 1024, params.limit || 200)
+      if (r.error !== 0) throw new Error(errName(r.error))
+      return r
+    }
+    case 'produce': {
+      if (!session.meta) await session.refreshMeta()
+      const t = (session.meta.topics || []).find((x) => x.name === params.topic)
+      if (!t) throw new Error('Topic 不存在：' + params.topic)
+      const meta = t.partitions.find((x) => x.partition === params.partition)
+      if (!meta) throw new Error('分区不存在')
+      const conn = await session.brokerConn(meta.leader)
+      const r = await reqProduce(conn, params.topic, params.partition,
+        params.key != null && params.key !== '' ? Buffer.from(String(params.key), 'utf8') : null,
+        params.value != null ? Buffer.from(String(params.value), 'utf8') : null)
       if (r.error !== 0) throw new Error(errName(r.error))
       return r
     }
